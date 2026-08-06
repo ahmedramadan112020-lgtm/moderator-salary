@@ -1,0 +1,447 @@
+rules_version = '2';
+
+// -----------------------------------------------------------------------
+// Firestore Security Rules
+// -----------------------------------------------------------------------
+// Access model: only authenticated users who have a corresponding
+// `users/{uid}` document with role == 'admin' may read or write any
+// business data. All other requests (including unauthenticated ones)
+// are denied. Deploy with:
+//   firebase deploy --only firestore:rules
+// -----------------------------------------------------------------------
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin');
+    }
+
+    // Custom roles are resolved in the client and persisted on every user
+    // profile as `permissions`. Legacy admin/super_admin profiles retain
+    // their former full access until an administrator explicitly reassigns
+    // them, which makes the migration non-breaking.
+    function hasAnyPermission(required) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        (isAdmin() ||
+          (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.keys().hasAll(['permissions']) &&
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.permissions is list &&
+           (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.permissions.hasAny(['*']) ||
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.permissions.hasAny(required))));
+    }
+
+    // Super Admin is intentionally separate from the payroll Admin role.
+    // `systemRole` makes the automatic migration compatible with old Admin
+    // profiles without changing their physical role field.
+    function isSuperAdmin() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin' ||
+         (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.keys().hasAll(['systemRole']) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.systemRole == 'super_admin'));
+    }
+
+    // -------------------------------------------------------------------
+    // MONTH LOCK
+    // -------------------------------------------------------------------
+    // A month whose stored `status` is 'locked' has been closed: its
+    // snapshot and backup were written, its Monthly Summary published and
+    // the close recorded in the audit log. From that moment it is payroll
+    // history and must never change again.
+    //
+    // Enforcing this in the RULES, not only in the client, is the whole
+    // point. The app's apiKey is public, so anyone holding it could
+    // otherwise call the REST API directly and rewrite a closed month's
+    // salaries. The UI greying out its buttons is convenience; this is the
+    // actual guarantee.
+    //
+    // Reads the month document itself, so every collection that belongs to
+    // a month (its subcollections, its summary, its advances) can ask the
+    // same single question and can never disagree about the answer.
+    function monthLocked(monthId) {
+      return exists(/databases/$(database)/documents/monthly_reports/$(monthId)) &&
+             get(/databases/$(database)/documents/monthly_reports/$(monthId)).data.keys().hasAll(['status']) &&
+             get(/databases/$(database)/documents/monthly_reports/$(monthId)).data.status == 'locked';
+    }
+
+    // An archived month is retained for reference but is intentionally not a
+    // working month. This independent flag lets an open month be archived
+    // without rewriting the approved/locked lifecycle state.
+    function monthArchived(monthId) {
+      return exists(/databases/$(database)/documents/monthly_reports/$(monthId)) &&
+             get(/databases/$(database)/documents/monthly_reports/$(monthId)).data.keys().hasAll(['archived']) &&
+             get(/databases/$(database)/documents/monthly_reports/$(monthId)).data.archived == true;
+    }
+
+    // Snapshot and monthly-backup documents are immutable in ordinary work.
+    // The only exception is a Month Reset committed in the SAME batch as a
+    // replacement empty month document. getAfter makes a standalone delete
+    // fail, including one issued from the browser console.
+    function monthIsBeingReset(monthId) {
+      return exists(/databases/$(database)/documents/monthly_reports/$(monthId)) &&
+        !monthLocked(monthId) && !monthArchived(monthId) &&
+        getAfter(/databases/$(database)/documents/monthly_reports/$(monthId)).data.keys().hasAll([
+          'status', 'archived', 'isEmpty', 'orderCount', 'employeeCount',
+          'report', 'totals', 'departmentTotals'
+        ]) &&
+        getAfter(/databases/$(database)/documents/monthly_reports/$(monthId)).data.status == 'open' &&
+        getAfter(/databases/$(database)/documents/monthly_reports/$(monthId)).data.archived == false &&
+        getAfter(/databases/$(database)/documents/monthly_reports/$(monthId)).data.isEmpty == true &&
+        getAfter(/databases/$(database)/documents/monthly_reports/$(monthId)).data.orderCount == 0 &&
+        getAfter(/databases/$(database)/documents/monthly_reports/$(monthId)).data.employeeCount == 0 &&
+        getAfter(/databases/$(database)/documents/monthly_reports/$(monthId)).data.report.size() == 0 &&
+        getAfter(/databases/$(database)/documents/monthly_reports/$(monthId)).data.departmentTotals.size() == 0 &&
+        getAfter(/databases/$(database)/documents/monthly_reports/$(monthId)).data.totals == null;
+    }
+
+    // Whether a write that carries a `monthId` field targets a locked
+    // month. Used by advances/adjustments, which are attributed to the
+    // month of their own date rather than to whichever month is on screen.
+    function writesIntoLockedMonth() {
+      return request.resource.data.monthId is string &&
+             monthLocked(request.resource.data.monthId);
+    }
+
+    // Whether the EXISTING document being changed/removed belongs to a
+    // locked month. Deleting an advance out of a closed month would change
+    // that month's payroll just as surely as adding one.
+    function existingBelongsToLockedMonth() {
+      return resource != null &&
+             resource.data.monthId is string &&
+             monthLocked(resource.data.monthId);
+    }
+
+    // A signed-in user may read their own profile and create it on first
+    // login. Only an existing admin may edit roles afterwards.
+    //
+    // The 'admin' role may only be self-assigned on create by whichever
+    // user claims the one-time settings/adminBootstrap marker (see below)
+    // in the same batch - i.e. genuinely the very first user of a brand
+    // new deployment. Every other signed-in user's doc must be created
+    // with role 'pending' and can only be promoted afterwards by an
+    // existing admin. Without this, anyone holding the public client
+    // apiKey could call the Auth REST API to register an account (Email/
+    // Password sign-in allows self-service sign-up by default) and then
+    // write role:'admin' straight into their own profile.
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isSuperAdmin() || hasAnyPermission(['backups.create', 'backups.restore']));
+      allow create: if isSignedIn() && request.auth.uid == userId &&
+        (
+          request.resource.data.role == 'pending' ||
+          ((request.resource.data.role == 'admin' || request.resource.data.role == 'super_admin') &&
+           !exists(/databases/$(database)/documents/settings/adminBootstrap))
+        );
+      allow update, delete: if isSuperAdmin();
+    }
+
+    // Role definitions can change the rights of many accounts at once.
+    // Restrict their lifecycle to the existing Super Admin boundary; role
+    // assignment itself remains protected by the same boundary above.
+    // No seed document is required: a brand-new Firestore project simply
+    // has no `roles` collection, and a list query correctly returns empty.
+    // The client then uses its immutable built-in role templates.
+    match /roles/{roleId} {
+      allow read: if isSuperAdmin() || hasAnyPermission(['backups.create', 'backups.restore']);
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    // One-time marker claimed atomically (same batch) by whichever user
+    // becomes the bootstrap admin above. Its mere existence permanently
+    // closes the self-assign-admin window for everyone else.
+    match /settings/adminBootstrap {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() &&
+        !exists(/databases/$(database)/documents/settings/adminBootstrap);
+      allow update, delete: if isAdmin();
+    }
+
+    // Employees. The collection keeps its original `moderators` name so
+    // every existing document id (referenced by advances, adjustments and
+    // all historical monthly_reports) stays valid - see COLLECTIONS in
+    // js/firebase.js. Employees now carry a `departmentId`.
+    //
+    // Deliberately NOT tied to the month lock: an employee record is live
+    // master data, not month data. Renaming someone or changing their
+    // salary must stay possible while old months are closed, and it cannot
+    // corrupt them - every closed month stores its own frozen copy of the
+    // rows and names it was calculated with.
+    match /moderators/{moderatorId} {
+      allow read: if hasAnyPermission(['employees.read']);
+      allow create, update: if hasAnyPermission(['employees.write', 'backups.restore']);
+      allow delete: if hasAnyPermission(['employees.delete']);
+    }
+
+    // Departments. Soft-deleted (status: 'archived') rather than removed,
+    // because historical monthly reports reference departmentId forever.
+    // `delete` is denied outright so no client - not even an admin - can
+    // orphan a historical report by hard-deleting a department.
+    match /departments/{departmentId} {
+      allow read: if hasAnyPermission(['departments.read']);
+      allow create, update: if hasAnyPermission(['departments.write', 'backups.restore']);
+      allow delete: if false;
+    }
+
+    match /settings/{docId} {
+      allow read: if hasAnyPermission(['settings.read']);
+      allow write: if hasAnyPermission(['settings.write', 'backups.restore']);
+    }
+
+    // Advances and adjustments belong to the month of their own DATE, so
+    // both the incoming write and the existing document are checked. This
+    // is what stops an advance being back-dated into a month that has
+    // already been closed and paid out.
+    match /advances/{advanceId} {
+      allow read: if hasAnyPermission(['transactions.read']);
+      allow create: if hasAnyPermission(['transactions.write', 'backups.restore']) && !writesIntoLockedMonth();
+      allow update: if hasAnyPermission(['transactions.write', 'backups.restore']) && !existingBelongsToLockedMonth() && !writesIntoLockedMonth();
+      allow delete: if hasAnyPermission(['transactions.write']) && !existingBelongsToLockedMonth();
+    }
+
+    match /adjustments/{adjustmentId} {
+      allow read: if hasAnyPermission(['transactions.read']);
+      allow create: if hasAnyPermission(['transactions.write', 'backups.restore']) && !writesIntoLockedMonth();
+      allow update: if hasAnyPermission(['transactions.write', 'backups.restore']) && !existingBelongsToLockedMonth() && !writesIntoLockedMonth();
+      allow delete: if hasAnyPermission(['transactions.write']) && !existingBelongsToLockedMonth();
+    }
+
+    match /monthly_reports/{monthId} {
+
+      // `resource` here is the EXISTING month document, so this reads the
+      // status already in the database - never the one the writer sends.
+      // Legacy month documents predate the lifecycle field and therefore
+      // have no `status`. Rules expressions reject a missing map field, so
+      // check its presence before reading it; those legacy documents are
+      // intentionally treated as open.
+      function thisMonthIsLocked() {
+        return resource != null &&
+          resource.data.keys().hasAll(['status']) &&
+          resource.data.status == 'locked';
+      }
+
+      function thisMonthIsArchived() {
+        return resource != null &&
+          resource.data.keys().hasAll(['archived']) &&
+          resource.data.archived == true;
+      }
+
+      // The single transition a month is allowed to make into the locked
+      // state is the closing write itself: status becomes 'locked' on a
+      // month that is currently open. Every write after that is refused.
+      function isClosingWrite() {
+        return request.resource.data.status == 'locked' && !thisMonthIsLocked();
+      }
+
+      // Reopening is the only permitted edit to an already locked month.
+      // It is deliberately limited to changing `status` back to `open`:
+      // an administrator cannot use this exception to alter report figures,
+      // snapshot references, backups, or any other locked-month history.
+      function isReopeningWrite() {
+        return thisMonthIsLocked() &&
+          request.resource.data.status == 'open' &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+      }
+
+      // Archive/restore only change the lifecycle metadata. They are kept
+      // separate from normal month edits so an archived month cannot be
+      // modified through a generic merge write.
+      function isArchiveWrite() {
+        return !thisMonthIsLocked() && !thisMonthIsArchived() &&
+          request.resource.data.archived == true &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['archived', 'archivedAt', 'archivedBy']);
+      }
+
+      function isArchiveRestoreWrite() {
+        return !thisMonthIsLocked() && thisMonthIsArchived() &&
+          request.resource.data.archived == false &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['archived', 'archivedAt', 'archivedBy']);
+      }
+
+      function isExplicitlyEmpty() {
+        return resource.data.keys().hasAll(['isEmpty']) &&
+          resource.data.isEmpty == true;
+      }
+
+      allow read: if hasAnyPermission(['reports.read', 'months.read', 'archive.read', 'comparison.read', 'backups.create', 'backups.restore']);
+      allow create: if hasAnyPermission(['reports.calculate', 'months.write']);
+      allow update: if hasAnyPermission(['reports.calculate', 'reports.approve', 'months.write', 'months.destructive']) &&
+        ((!thisMonthIsLocked() && !thisMonthIsArchived()) || isClosingWrite() ||
+          isReopeningWrite() || isArchiveWrite() || isArchiveRestoreWrite());
+      // A month can be deleted only when the app marked it empty at creation
+      // and the client transaction independently verified no order batches.
+      allow delete: if hasAnyPermission(['months.destructive']) && !thisMonthIsLocked() &&
+        !thisMonthIsArchived() && isExplicitlyEmpty();
+
+      // Raw imported orders, frozen along with their month.
+      match /orderBatches/{batchId} {
+        allow read: if hasAnyPermission(['orders.read', 'reports.read', 'backups.create', 'backups.restore']);
+        allow write: if hasAnyPermission(['orders.write', 'orders.import', 'backups.restore']) && !monthLocked(monthId) && !monthArchived(monthId);
+      }
+
+      // The frozen OUTPUT of a closed month: report rows, totals,
+      // department totals and the bonus tables used.
+      //
+      // Snapshot documents get AUTO ids, so every close creates a new one
+      // and nothing ever needs to overwrite an existing snapshot. A
+      // snapshot that could be edited would prove nothing, so update and
+      // delete are denied outright - to admins too.
+      match /snapshots/{snapshotId} {
+        allow read: if hasAnyPermission(['reports.read', 'archive.read', 'comparison.read']);
+        allow create: if hasAnyPermission(['reports.approve']) && !monthLocked(monthId);
+        allow update: if false;
+        allow delete: if hasAnyPermission(['months.destructive']) && monthIsBeingReset(monthId);
+      }
+
+      // The frozen INPUT of a closed month (employees, advances,
+      // adjustments, departments, settings as they were at closing time),
+      // written as chunk documents with DETERMINISTIC ids
+      // (`employees-0000`, `manifest`, ...).
+      //
+      // Deterministic ids mean a retry re-`set()`s the same document, which
+      // the rules engine sees as an UPDATE. So update must stay allowed
+      // while the month is open - otherwise a close that died after the
+      // backup step could never be retried, and the month would be stuck
+      // forever. Once the month is locked (step 6 of the close, i.e. after
+      // the backup) no further write of any kind is possible.
+      match /backups/{backupId} {
+        allow read: if hasAnyPermission(['reports.read', 'backups.read']);
+        allow create: if hasAnyPermission(['reports.approve']) && !monthLocked(monthId);
+        allow update: if hasAnyPermission(['reports.approve']) && !monthLocked(monthId);
+        allow delete: if hasAnyPermission(['months.destructive']) && monthIsBeingReset(monthId);
+      }
+    }
+
+    // Monthly Summary: the small per-month index that the Months page, the
+    // Archive and later reporting phases read instead of downloading every
+    // month's full report.
+    //
+    // Pinned to the month's own lock, with NO exception - and that is
+    // deliberate. The closing flow writes this summary at step 4, BEFORE it
+    // locks the month at step 6, so at the moment of writing `monthLocked()`
+    // is still false and the write is allowed. Once the month is locked its
+    // summary is frozen with it.
+    //
+    // (An earlier version carried an `status == 'locked'` exception here.
+    // It was worse than useless: because every summary write is a
+    // `set(..., {merge: true})`, `request.resource.data` is the MERGED
+    // result, so a locked month's summary always reads back as
+    // status:'locked' and the exception would have allowed any write at
+    // all - including one rewriting the totals the archive displays.)
+    match /monthly_summaries/{monthId} {
+      allow read: if hasAnyPermission(['months.read', 'reports.read', 'archive.read', 'comparison.read', 'backups.create', 'backups.restore']);
+      allow create: if hasAnyPermission(['reports.approve', 'months.write']);
+      // During an atomic archive restore, the parent month becomes
+      // unarchived in the same transaction; getAfter keeps the two documents
+      // in lockstep without allowing a standalone summary edit while archived.
+      allow update: if hasAnyPermission(['reports.approve', 'months.write']) && !monthLocked(monthId) &&
+        (!monthArchived(monthId) ||
+          (exists(/databases/$(database)/documents/monthly_reports/$(monthId)) &&
+           getAfter(/databases/$(database)/documents/monthly_reports/$(monthId)).data.keys().hasAll(['archived']) &&
+           getAfter(/databases/$(database)/documents/monthly_reports/$(monthId)).data.archived == false));
+      allow delete: if hasAnyPermission(['months.destructive']) &&
+        exists(/databases/$(database)/documents/monthly_reports/$(monthId)) &&
+        get(/databases/$(database)/documents/monthly_reports/$(monthId)).data.keys().hasAll(['isEmpty']) &&
+        get(/databases/$(database)/documents/monthly_reports/$(monthId)).data.isEmpty == true;
+    }
+
+    // Final settlements (مخالصة نهاية الخدمة).
+    //
+    // An approved settlement is a permanent financial record of what was
+    // paid to a departing employee, so it is create-only: never edited,
+    // never deleted. A mistake is corrected by a manual adjustment in an
+    // open month, which leaves a visible trail - not by quietly rewriting
+    // what the company recorded that it paid.
+    //
+    // Tied to the month lock on create for the same reason advances are: a
+    // settlement moves money inside its month, and a closed month has
+    // already been paid out.
+    match /settlements/{settlementId} {
+      allow read: if hasAnyPermission(['settlements.read']);
+      allow create: if hasAnyPermission(['settlements.write']) && !writesIntoLockedMonth();
+      allow update, delete: if false;
+    }
+
+    // Salary Processing is a separate payroll snapshot, keyed by month id.
+    // It must be reachable in production, but remains append-only once all
+    // payments are recorded.  Corrections are made before payment and are
+    // captured by the append-only audit log from the client workflow.
+    match /salary_processing/{monthId} {
+      allow read: if hasAnyPermission(['salary_processing.read', 'backups.create', 'backups.restore']);
+      allow create: if hasAnyPermission(['salary_processing.approve']) &&
+        request.resource.data.period.monthId == monthId &&
+        request.resource.data.status == 'approved';
+      allow update: if (isSuperAdmin() && hasAnyPermission(['backups.restore'])) ||
+        (resource.data.status != 'paid' && request.resource.data.period.monthId == monthId &&
+          ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['employeeManualEntries', 'updatedAt']) && hasAnyPermission(['salary_processing.write'])) ||
+           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['employeePayments', 'status', 'updatedAt']) && hasAnyPermission(['salary_processing.pay']))));
+      allow delete: if false;
+    }
+
+    // Audit log: append-only, permanently.
+    //
+    // A trail that can be edited or deleted by the same account that
+    // performs the actions is not a trail at all, so `update` and `delete`
+    // are denied outright - to admins too. Corrections are made by
+    // appending a new entry, never by rewriting an old one.
+    //
+    // Every business write in the app now rides in the same WriteBatch as its
+    // audit entry (see js/data-layer.js), so an action that changed data
+    // without being logged cannot commit. These rules are the other half of
+    // that guarantee: the entry, once written, cannot be removed afterwards.
+    match /audit_logs/{logId} {
+      allow read: if hasAnyPermission(['audit.read', 'backups.create', 'backups.restore']);
+      allow create: if hasAnyPermission(['employees.write','employees.delete','departments.write','orders.write','orders.import','months.write','months.destructive','reports.calculate','reports.approve','transactions.write','salary_processing.write','salary_processing.approve','salary_processing.pay','salary_processing.export','settlements.write','backups.create','backups.restore','settings.write','users.manage']);
+      allow update, delete: if false;
+    }
+
+    // -------------------------------------------------------------------
+    // SYSTEM BACKUPS  (top-level `backups`)
+    // -------------------------------------------------------------------
+    // Restorable point-in-time copies of the live master data, written by
+    // js/backup.js. Distinct from the per-month `backups` SUBCOLLECTION under
+    // monthly_reports, which freezes one month's inputs and is governed by
+    // that month's lock further up this file.
+    //
+    // A backup is IMMUTABLE once written: `update` is denied so a manifest's
+    // counts, timestamps and author can never be altered after the fact. A
+    // backup whose metadata could be edited would prove nothing about what it
+    // contains, which defeats the point of having one.
+    //
+    // `delete` is allowed for admins, unlike the audit log. That asymmetry is
+    // deliberate: an audit entry is evidence and must survive, while backups
+    // accumulate indefinitely and consume real storage, so pruning old ones
+    // is legitimate housekeeping rather than tampering. The audit log records
+    // every backup that was ever created, so deleting one still leaves a
+    // trace that it existed.
+    match /backups/{backupId} {
+      allow read: if hasAnyPermission(['backups.read', 'backups.download']);
+      allow create: if hasAnyPermission(['backups.create']);
+      allow update: if false;
+      allow delete: if hasAnyPermission(['backups.restore']);
+
+      // The rows themselves, in chunk documents.
+      //
+      // Chunks are written BEFORE their manifest (so a half-written backup has
+      // no manifest and therefore cannot be listed or restored from), and use
+      // deterministic ids (`employees-0000`) so a retry overwrites the same
+      // document instead of duplicating rows. That retry is an UPDATE to the
+      // rules engine, which is why update must stay allowed here even though
+      // the manifest above is immutable - the manifest is the thing whose
+      // integrity matters, and it is written exactly once.
+      match /chunks/{chunkId} {
+        allow read: if hasAnyPermission(['backups.read', 'backups.download', 'backups.restore']);
+        allow create, update: if hasAnyPermission(['backups.create', 'backups.restore']);
+        allow delete: if hasAnyPermission(['backups.restore']);
+      }
+    }
+  }
+}

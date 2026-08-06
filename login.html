@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>تسجيل الدخول - نظام إدارة رواتب المشرفين</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="login-page">
+
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="bonus-ladder" aria-hidden="true">
+        <span style="height:8px;background:#ef4444"></span>
+        <span style="height:16px;background:#6b7280"></span>
+        <span style="height:16px;background:#6b7280"></span>
+        <span style="height:20px;background:#3d5afe"></span>
+        <span style="height:24px;background:#3d5afe"></span>
+        <span style="height:30px;background:#22c55e"></span>
+        <span style="height:34px;background:#22c55e"></span>
+      </div>
+      <div class="sidebar-brand-text">
+        <h2>نظام رواتب المشرفين</h2>
+        <p>تسجيل الدخول للمتابعة</p>
+      </div>
+    </div>
+
+    <div id="loginError" class="login-error"></div>
+
+    <form id="loginForm">
+      <div class="field">
+        <label for="email">البريد الإلكتروني</label>
+        <input type="email" id="email" name="email" required autocomplete="username" placeholder="you@company.com">
+      </div>
+      <div class="field">
+        <label for="password">كلمة المرور</label>
+        <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="••••••••">
+      </div>
+      <button type="submit" class="btn-primary" id="loginSubmitBtn">تسجيل الدخول</button>
+    </form>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="js/firebase.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    Auth.redirectIfLoggedIn();
+
+    const form = document.getElementById('loginForm');
+    const errorBox = document.getElementById('loginError');
+    const submitBtn = document.getElementById('loginSubmitBtn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorBox.classList.remove('visible');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'جاري الدخول...';
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      try {
+        await Auth.login(email, password);
+        window.location.href = 'dashboard.html?v=2-orders';
+      } catch (err) {
+        errorBox.textContent = err.message;
+        errorBox.classList.add('visible');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'تسجيل الدخول';
+      }
+    });
+  </script>
+</body>
+</html>

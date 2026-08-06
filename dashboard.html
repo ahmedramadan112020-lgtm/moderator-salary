@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>لوحة التحكم - نظام إدارة رواتب الشركة</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- ============================== SIDEBAR ============================== -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-brand">
+        <div class="bonus-ladder" aria-hidden="true">
+          <span style="height:8px;background:#ef4444"></span>
+          <span style="height:16px;background:#6b7280"></span>
+          <span style="height:16px;background:#6b7280"></span>
+          <span style="height:20px;background:#3d5afe"></span>
+          <span style="height:24px;background:#3d5afe"></span>
+          <span style="height:30px;background:#22c55e"></span>
+          <span style="height:34px;background:#22c55e"></span>
+        </div>
+        <div class="sidebar-brand-text">
+          <h2>نظام رواتب الشركة</h2>
+          <p>لوحة التحكم</p>
+        </div>
+      </div>
+      <button class="icon-btn" id="sidebarToggle" title="طي القائمة">☰</button>
+    </div>
+
+    <nav class="nav-section">
+      <div class="nav-section-title">القائمة الرئيسية</div>
+      <button class="nav-item active" data-view="dashboard"><span class="nav-icon">📊</span><span class="nav-label">الرئيسية</span></button>
+      <div class="nav-group-label">إدارة البيانات</div>
+      <button class="nav-item" data-view="departments"><span class="nav-icon">🏢</span><span class="nav-label">الأقسام</span></button>
+      <button class="nav-item" data-view="moderators"><span class="nav-icon">👥</span><span class="nav-label">الموظفون</span></button>
+      <button class="nav-item" data-view="orders"><span class="nav-icon">🧾</span><span class="nav-label">الطلبات</span></button>
+      <button class="nav-item" data-view="months"><span class="nav-icon">🗓️</span><span class="nav-label">الشهور</span></button>
+      <div class="nav-group-label">الرواتب والتحليلات</div>
+      <button class="nav-item" data-view="month-comparison"><span class="nav-icon">⚖️</span><span class="nav-label">مقارنة الشهور</span></button>
+      <button class="nav-item" data-view="report"><span class="nav-icon">📄</span><span class="nav-label">التقرير الشهري</span></button>
+      <button class="nav-item" data-view="transactions"><span class="nav-icon">💵</span><span class="nav-label">السلف والتسويات</span></button>
+      <button class="nav-item" data-view="settlement"><span class="nav-icon">🤝</span><span class="nav-label">تسوية مستحقات</span></button>
+      <div class="nav-group-label">السجل والنظام</div>
+      <button class="nav-item" data-view="archive"><span class="nav-icon">🗄️</span><span class="nav-label">الأرشيف</span></button>
+      <button class="nav-item" data-view="backups"><span class="nav-icon">📦</span><span class="nav-label">النسخ الاحتياطية</span></button>
+      <button class="nav-item" data-view="audit"><span class="nav-icon">📋</span><span class="nav-label">سجل العمليات</span></button>
+      <button class="nav-item" data-view="settings"><span class="nav-icon">⚙️</span><span class="nav-label">الإعدادات</span></button>
+      <button class="nav-item" data-view="users"><span class="nav-icon">👤</span><span class="nav-label">إدارة المستخدمين</span></button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar" id="userAvatar">A</div>
+        <div class="user-info-text">
+          <span class="email" id="userEmailLabel">...</span>
+        </div>
+      </div>
+      <button id="logoutBtn">🚪 تسجيل الخروج</button>
+    </div>
+  </aside>
+
+  <!-- ============================== MAIN CONTENT ============================== -->
+  <main class="main-content">
+
+    <div class="topbar">
+      <div>
+        <nav class="breadcrumb" aria-label="مسار الصفحة"><span>نظام الرواتب</span><span class="breadcrumb-separator">/</span><strong id="breadcrumbCurrent">نظرة عامة</strong></nav>
+        <h1 id="pageTitle">نظرة عامة</h1>
+        <div class="subtitle">
+          الشهر النشط: <strong id="currentMonthLabel">-</strong>
+          <span id="monthStatusBadge" class="badge badge-active">نشط</span>
+          &nbsp;•&nbsp; النطاق: <strong id="dashboardScopeLabel">كل الأقسام</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shown whenever the month being viewed is locked. Every editing
+         control in the app is disabled while this is visible. -->
+    <div class="locked-banner hidden" id="lockedMonthBanner">
+      <span class="locked-banner-icon">🔒</span>
+      <div>
+        <strong>شهر <span id="lockedBannerMonth">-</span> للعرض فقط.</strong>
+        مش ممكن تعديل أي بيانات فيه (حساب، سلف، تسويات، استيراد، مسح).
+        لو عايز تشتغل على الشهر النشط، اختاره من <strong>إدارة الشهور</strong>.
+      </div>
+    </div>
+
+    <!-- ===================== VIEW: DASHBOARD ===================== -->
+    <section class="view active" id="view-dashboard">
+      <section class="dashboard-hero" aria-label="ملخص الشهر">
+        <div class="dashboard-hero-copy"><span class="eyebrow">مساحة عمل الرواتب</span><h2>نظرة مالية وتشغيلية موحّدة</h2><p>راجع جاهزية الشهر، المؤشرات الأساسية، والتنبيهات قبل اعتماد التقرير.</p></div>
+        <div class="dashboard-hero-orbit" aria-hidden="true"></div>
+      <div class="dashboard-status" role="status" aria-live="polite">
+        <div class="dashboard-status-item"><span>الشهر الحالي</span><strong id="dashboardStatusMonth">—</strong></div>
+        <div class="dashboard-status-item"><span>حالة التقرير</span><strong id="dashboardStatusReport">غير محسوب</strong></div>
+        <div class="dashboard-status-item"><span>آخر Backup</span><strong id="dashboardStatusBackup">لم يتم التحميل</strong></div>
+        <div class="dashboard-status-item"><span>عمليات معلّقة</span><strong id="dashboardStatusPending">0</strong></div>
+        <div class="dashboard-status-item"><span>آخر استيراد</span><strong id="dashboardStatusImport">لا توجد بيانات</strong></div>
+      </div>
+      </section>
+
+      <div class="dashboard-quick-actions" aria-label="إجراءات سريعة">
+        <button class="btn" id="quickAddEmployeeBtn" data-permission="employees.write">➕ إضافة موظف</button>
+        <button class="btn" id="quickImportOrdersBtn" data-permission="orders.import">📥 استيراد الطلبات</button>
+        <button class="btn btn-accent" id="quickCalculateReportBtn" data-permission="reports.calculate">🧮 حساب التقرير</button>
+        <button class="btn" id="quickApproveReportBtn" data-permission="reports.approve">✅ اعتماد التقرير</button>
+        <button class="btn" id="quickBackupBtn" data-permission="backups.create">📦 نسخة احتياطية</button>
+      </div>
+
+      <section class="dashboard-alerts" aria-label="تنبيهات الشهر">
+        <div class="section-heading"><div><span class="eyebrow">متابعة ذكية</span><h2>تنبيهات وإجراءات مقترحة</h2></div><span class="section-caption">تُحدّث من حالة الشهر الحالية</span></div>
+        <div class="alerts-grid" id="dashboardAlertsGrid"><div class="alert-card alert-info"><span class="alert-icon">ℹ️</span><div><strong>حالة التقرير</strong><p>استخدم اعتماد التقرير لإجراء فحص Smart Approval قبل القفل.</p></div></div></div>
+      </section>
+
+      <div class="section-heading dashboard-metrics-heading"><div><span class="eyebrow">ملخص الأداء</span><h2>المؤشرات التشغيلية</h2></div><span class="section-caption">الموظفون والطلبات</span></div>
+      <div class="cards-grid cards-grid-operational">
+        <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-value" id="cardTotalModerators">0</div><div class="stat-label">إجمالي الموظفين</div></div>
+        <div class="stat-card"><div class="stat-icon">🟢</div><div class="stat-value" id="cardActiveEmployees">0</div><div class="stat-label">الموظفون النشطون</div></div>
+        <div class="stat-card"><div class="stat-icon">🏢</div><div class="stat-value" id="cardTotalDepartments">0</div><div class="stat-label">الأقسام النشطة</div></div>
+        <div class="stat-card"><div class="stat-icon">⏱️</div><div class="stat-value" id="cardTotalHours">0</div><div class="stat-label">إجمالي ساعات العمل</div></div>
+        <div class="stat-card"><div class="stat-icon">📦</div><div class="stat-value" id="cardTotalOrders">0</div><div class="stat-label">إجمالي الطلبات</div></div>
+        <div class="stat-card"><div class="stat-icon">🧾</div><div class="stat-value" id="cardTotalPackages">0</div><div class="stat-label">إجمالي الطرود</div></div>
+      </div>
+
+      <div class="section-heading dashboard-metrics-heading"><div><span class="eyebrow">الذمة المالية</span><h2>المؤشرات المالية</h2></div><span class="section-caption">القيم المسجلة في التقرير</span></div>
+      <div class="cards-grid">
+        <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-value" id="cardTotalSales">0</div><div class="stat-label">إجمالي المبيعات</div></div>
+        <div class="stat-card"><div class="stat-icon">💼</div><div class="stat-value" id="cardTotalSalaries">0</div><div class="stat-label">إجمالي الرواتب الأساسية</div></div>
+        <div class="stat-card"><div class="stat-icon">🎁</div><div class="stat-value" id="cardTotalBonus">0</div><div class="stat-label">إجمالي البونص</div></div>
+        <div class="stat-card"><div class="stat-icon">💳</div><div class="stat-value" id="cardTotalAdvances">0</div><div class="stat-label">إجمالي السلف</div></div>
+        <div class="stat-card"><div class="stat-icon">🔧</div><div class="stat-value" id="cardTotalAdjustments">0</div><div class="stat-label">إجمالي التسويات</div></div>
+        <div class="stat-card"><div class="stat-icon">🧾</div><div class="stat-value" id="cardTransactionCount">0</div><div class="stat-label">عدد السلف والتسويات</div></div>
+        <div class="stat-card"><div class="stat-icon">📌</div><div class="stat-value" id="cardTotalCarriedDebt">0</div><div class="stat-label">ديون مرحّلة للشهر القادم</div></div>
+        <div class="stat-card"><div class="stat-icon">🏆</div><div class="stat-value" id="cardTotalFinalSalaries">0</div><div class="stat-label">صافي المستحقات</div></div>
+      </div>
+
+      <div class="dashboard-insights-grid">
+        <div class="panel dashboard-insights-panel">
+          <div class="panel-header"><h2>أفضل الموظفين</h2><span class="rate-badge">من التقرير الحالي</span></div>
+          <div class="dashboard-insights" id="dashboardEmployeeHighlights"></div>
+        </div>
+        <div class="panel dashboard-insights-panel">
+          <div class="panel-header"><h2>أفضل الأقسام</h2><span class="rate-badge">من ملخص الشهر</span></div>
+          <div class="dashboard-insights" id="dashboardDepartmentHighlights"></div>
+        </div>
+      </div>
+
+      <section class="dashboard-executive-section" aria-label="تحليلات تشغيلية إضافية">
+        <div class="section-heading"><div><span class="eyebrow">تحليلات تنفيذية</span><h2>المنتجات والمحافظات والنشاط</h2></div><span class="section-caption">تظهر عند توفر بيانات تشغيلية كافية</span></div>
+        <div class="dashboard-operational-widgets" id="dashboardOperationalWidgets"></div>
+      </section>
+
+      <!-- Company View only: per-department summary read straight from the
+           month's stored departmentTotals (never recalculated). -->
+      <div class="panel" id="departmentBreakdownPanel">
+        <div class="panel-header">
+          <h2>ملخص الأقسام</h2>
+          <span class="rate-badge">من بيانات الشهر المحفوظة — التقارير القديمة ثابتة ولا تتغير</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>القسم</th>
+                <th>عدد الموظفين</th>
+                <th>إجمالي الراتب الأساسي</th>
+                <th>إجمالي البونص</th>
+                <th>إجمالي التسويات</th>
+                <th>إجمالي الخصومات</th>
+                <th>ديون مرحّلة</th>
+                <th>صافي المستحقات</th>
+              </tr>
+            </thead>
+            <tbody id="departmentBreakdownBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="chart-card"><h3>أفضل الموظفين في المبيعات</h3><div class="chart-wrap"><canvas id="chartTopSales"></canvas><div class="chart-empty" hidden></div></div></div>
+        <div class="chart-card"><h3>أفضل الموظفين في البونص</h3><div class="chart-wrap"><canvas id="chartTopBonus"></canvas><div class="chart-empty" hidden></div></div></div>
+        <div class="chart-card"><h3>توزيع الطرود</h3><div class="chart-wrap"><canvas id="chartPackagesDist"></canvas><div class="chart-empty" hidden></div></div></div>
+        <div class="chart-card"><h3 id="chartSalesDistTitle">صافي الرواتب حسب القسم</h3><div class="chart-wrap"><canvas id="chartSalesDist"></canvas><div class="chart-empty" hidden></div></div></div>
+        <div class="chart-card"><h3>البونص حسب القسم</h3><div class="chart-wrap"><canvas id="chartDepartmentBonus"></canvas><div class="chart-empty" hidden></div></div></div>
+        <div class="chart-card"><h3>الطلبات حسب القسم</h3><div class="chart-wrap"><canvas id="chartDepartmentOrders"></canvas><div class="chart-empty" hidden></div></div></div>
+      </div>
+    </section>
+
+    <!-- ===================== VIEW: DEPARTMENTS ===================== -->
+    <section class="view" id="view-departments">
+      <div class="panel">
+        <div class="panel-header">
+          <h2>إدارة الأقسام</h2>
+          <button class="btn btn-accent" id="addDepartmentBtn">➕ إضافة قسم</button>
+        </div>
+        <div class="hint-box">
+          كل موظف بينتمي لقسم واحد بس. راتب كل موظف الشهري الثابت بيتحدد يدويًا من صفحة الموظفين.
+          نوع القسم بيحدد بس هل موظفينه بياخدوا <strong>بونص</strong> على الأوردرات ولا لأ.<br>
+          الأقسام <strong>مابتتحذفش نهائيًا</strong> — بتتأرشف بس، عشان التقارير القديمة تفضل
+          شغالة وتعرض اسم القسم زي ما كان وقت الحساب بالظبط.
+        </div>
+        <div class="toolbar">
+          <label class="check-field" for="showArchivedDepartments" style="min-width:220px">
+            <input type="checkbox" id="showArchivedDepartments">
+            <span>إظهار الأقسام المؤرشفة</span>
+          </label>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>القسم</th>
+                <th>نوع الراتب</th>
+                <th>جدول البونص</th>
+                <th>عدد الموظفين</th>
+                <th>الحالة</th>
+                <th>إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="departmentsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== VIEW: EMPLOYEES ===================== -->
+    <section class="view" id="view-moderators">
+      <div class="panel">
+        <div class="panel-header">
+          <h2>إدارة الموظفين</h2>
+          <button class="btn btn-accent" id="addModeratorBtn">➕ إضافة موظف</button>
+        </div>
+        <div class="toolbar">
+          <input type="text" class="search-input" id="moderatorSearch" placeholder="🔍 بحث عن موظف...">
+          <select id="employeeDeptFilter" class="search-input" title="فلتر حسب القسم"></select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>الاسم</th>
+                <th>القسم</th>
+                <th>الراتب الشهري الثابت</th>
+                <th>ساعات العمل</th>
+                <th>الحالة</th>
+                <th>تاريخ التعيين</th>
+                <th>ملاحظات</th>
+                <th>إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="moderatorsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== VIEW: IMPORT ===================== -->
+    <section class="view" id="view-import">
+      <div class="panel">
+        <div class="panel-header"><h2>استيراد الطلبات</h2></div>
+        <div class="import-stepper" id="importStepper"><span class="active" data-import-step="1">1 القسم</span><span data-import-step="2">2 الملف</span><span data-import-step="3">3 التحليل</span><span data-import-step="4">4 المعاينة</span><span data-import-step="5">5 الاعتماد</span><span data-import-step="6">6 النجاح</span><span data-import-step="7">7 السجل</span></div>
+
+        <div class="import-wizard-stage active" data-import-stage="1"><div class="field import-department-field"><label for="importDepartmentSelect">القسم المستهدف</label><select id="importDepartmentSelect"><option value="auto">تحديد تلقائي</option></select></div><button class="btn btn-accent" type="button" data-import-next="2">التالي</button></div><div class="import-wizard-stage" data-import-stage="2"><div class="import-methods">
+          <div>
+            <h3 style="font-size:14px;margin:0 0 10px;color:var(--text-secondary)">الطريقة 1: لصق نص</h3>
+            <datalist id="moderatorDatalist"></datalist>
+            <textarea id="importTextArea" placeholder="اسم المشرف&#9;عدد الطرود&#9;السعر
+Hind&#9;4&#9;550
+ريم&#9;4&#9;550
+Haba&#9;7&#9;750"></textarea>
+            <div class="hint-box">
+              كل سطر يحتوي على: الاسم ثم عدد الطرود ثم السعر (مفصولة بمسافة أو Tab).<br>
+              يتم تجاهل الأسطر الفارغة، ويتم التعامل تلقائيًا مع الأخطاء الإملائية البسيطة في الأسماء.
+            </div>
+            <button class="btn btn-accent" id="importTextBtn" style="margin-top:14px">📥 استيراد النص</button>
+          </div>
+
+          <div>
+            <h3 style="font-size:14px;margin:0 0 10px;color:var(--text-secondary)">الطريقة 2: استيراد ملف Excel</h3>
+            <label for="excelFileInput" id="excelDropzone" class="dropzone" style="cursor:pointer">
+              <div class="dz-icon">📊</div>
+              <div>اضغط لاختيار ملف Excel، أو اسحب الملف وأفلته هنا</div>
+              <div style="font-size:11.5px;color:var(--text-muted)">الأعمدة: الاسم | عدد الطرود | السعر (xlsx / xls فقط)</div>
+            </label>
+            <input type="file" id="excelFileInput" accept=".xlsx,.xls" style="display:none">
+            <button type="button" class="btn" id="downloadImportTemplateBtn" style="margin-top:12px">⬇️ تحميل نموذج Excel</button>
+            <div class="hint-box">
+              مش شرط تكون أسماء الأعمدة مطابقة تمامًا — النظام بيتعرف على الأعمدة تلقائيًا
+              حتى لو الاسم مختلف شوية (مثلاً "الكمية" أو "Qty" بدل "عدد الطرود"). هيظهرلك
+              معاينة كاملة قبل ما يتم الاستيراد فعليًا.
+            </div>
+          </div>
+        </div><button class="btn" type="button" data-import-back="1">السابق</button></div><div class="import-wizard-stage" data-import-stage="3"><div id="importWizardPreview"></div><div class="wizard-actions"><button class="btn" type="button" data-import-back="2">السابق</button><button class="btn btn-accent" type="button" id="importWizardToValidation">التالي: التحقق</button></div></div><div class="import-wizard-stage" data-import-stage="4"><div id="importWizardValidation"></div><div class="wizard-actions"><button class="btn" type="button" data-import-back="3">السابق</button><button class="btn btn-accent" type="button" id="importWizardToApprove">متابعة للاعتماد</button></div></div><div class="import-wizard-stage" data-import-stage="5"><div class="hint-box">راجعت المعاينة والتحقق. لن تُكتب أي بيانات قبل الضغط على اعتماد الاستيراد.</div><div class="wizard-actions"><button class="btn" type="button" data-import-back="4">السابق</button><button class="btn btn-accent" type="button" id="importWizardConfirm">اعتماد الاستيراد</button></div></div><div class="import-wizard-stage" data-import-stage="6"><div id="importWizardSuccess" class="hint-box">اكتمل الاستيراد بنجاح.</div><button class="btn btn-accent" type="button" data-import-next="7">عرض سجل الاستيراد</button></div><div class="import-wizard-stage" data-import-stage="7"><div class="import-history-panel"><div class="panel-header"><h2>سجل الاستيراد</h2><button class="btn btn-sm" id="refreshImportHistoryBtn" type="button">تحديث</button></div><div class="table-wrap"><table><tbody id="importHistoryBody"></tbody></table></div></div></div>
+
+        <div id="importErrors" class="error-box hidden"></div>
+      </div>
+    </section>
+
+    <!-- ===================== VIEW: ORDERS ===================== -->
+    <section class="view" id="view-orders">
+      <div class="orders-center-header"><span class="eyebrow">مركز العمليات</span><h2>مركز إدارة الطلبات</h2><p>إدارة الطلبات والاستيراد ودورة التشغيل من مكان واحد.</p></div>
+      <div class="orders-center-tabs" role="tablist"><button class="orders-center-tab active" type="button" data-orders-tab="list">الطلبات</button><button class="orders-center-tab" type="button" data-orders-tab="import">استيراد الأوردرات</button><button class="orders-center-tab" type="button" data-orders-tab="shipping">تحديث شركة الشحن</button><button class="orders-center-tab" type="button" data-orders-tab="reports">تقارير الطلبات</button></div>
+      <div class="orders-center-panel active" data-orders-panel="list">
+      <div class="panel">
+        <div class="panel-header orders-header">
+          <div><h2>إدارة الطلبات</h2><p class="panel-subtitle">بيانات الاستيراد الفعلية — لا تعتمد على التقرير الشهري</p></div>
+          <div><button class="btn btn-sm" id="dataSourcesSyncBtn" type="button">مزامنة المصادر</button><button class="btn btn-sm" id="ordersRefreshBtn">🔄 تحديث</button></div>
+        </div>
+        <div class="orders-filters">
+          <input type="date" id="ordersDateFrom" title="من تاريخ">
+          <input type="date" id="ordersDateTo" title="إلى تاريخ">
+          <input class="search-input" id="ordersSearchInput" placeholder="بحث بالاسم أو الهاتف أو رقم الطلب">
+          <select id="ordersMonthFilter" title="فلترة بالشهر"><option value="">كل الشهور</option></select>
+          <select id="ordersDepartmentFilter" title="فلترة بالقسم"><option value="">كل الأقسام</option></select>
+          <select id="ordersModeratorFilter" title="فلترة بالمودريتور"><option value="">كل المودريتورز</option></select>
+          <select id="ordersGovernorateFilter" title="فلترة بالمحافظة"><option value="">كل المحافظات</option></select>
+          <select id="ordersShipmentStatusFilter" title="فلترة بحالة الشحنة"><option value="">كل الحالات</option></select>
+          <select id="ordersProductFilter" title="فلترة بالمنتج"><option value="">كل المنتجات</option></select>
+        </div>
+        <div class="cards-grid cards-grid-compact orders-summary" aria-live="polite"><div class="stat-card"><div class="stat-label">إجمالي الطلبات</div><div class="stat-value" id="ordersTotalCount">0</div></div><div class="stat-card"><div class="stat-label">تم التسليم</div><div class="stat-value" id="ordersDeliveredCount">0</div></div><div class="stat-card"><div class="stat-label">مرتجع</div><div class="stat-value" id="ordersReturnedCount">0</div></div><div class="stat-card"><div class="stat-label">مؤجل</div><div class="stat-value" id="ordersDeferredCount">0</div></div><div class="stat-card"><div class="stat-label">في الشحن</div><div class="stat-value" id="ordersShippingCount">0</div></div><div class="stat-card"><div class="stat-label">لم يتم التحديث</div><div class="stat-value" id="ordersNotUpdatedCount">0</div></div></div>
+        <div class="orders-toolbar"><span id="ordersCountLabel" class="text-muted-inline">0 طلب</span><span id="ordersPageLabel" class="text-muted-inline">صفحة 1 من 1</span></div>
+        <div class="table-wrap">
+          <table class="orders-table">
+            <thead><tr>
+              <th data-order-sort="orderDate">التاريخ</th><th data-order-sort="externalOrderNumber">رقم الطلب</th><th data-order-sort="customerName">اسم العميل</th><th data-order-sort="customerPhone">رقم الهاتف</th><th data-order-sort="productName">المنتج</th><th data-order-sort="packages">عدد العبوات</th><th data-order-sort="price">السعر</th><th data-order-sort="moderatorName">الموظف</th><th data-order-sort="departmentName">القسم</th><th data-order-sort="waybillNumber">رقم البوليصة</th><th data-order-sort="governorate">المحافظة</th><th data-order-sort="shipmentStatus">حالة الشحنة</th><th>الإجراءات</th>
+            </tr></thead>
+            <tbody id="ordersTableBody"></tbody>
+          </table>
+        </div>
+        <div class="orders-pagination"><button class="btn btn-sm" id="ordersPrevBtn">السابق</button><button class="btn btn-sm" id="ordersNextBtn">التالي</button></div>
+      </div>
+      <div class="panel" style="margin-top:20px">
+        <div class="panel-header"><div><h2>إدارة الـ Batches</h2><p class="panel-subtitle">عرض سريع لكل دفعة واسترجاع الاستيراد بشكل مستقل</p></div></div>
+        <div class="table-wrap"><table><thead><tr><th>Batch ID</th><th>الشهر</th><th>عدد الطلبات</th><th>تاريخ الاستيراد</th><th>المستورد</th><th>إجراءات</th></tr></thead><tbody id="ordersBatchesBody"></tbody></table></div>
+      </div>
+      </div>
+      <div class="orders-center-panel" data-orders-panel="import"><div id="ordersImportMount"></div></div>
+      <div class="orders-center-panel" data-orders-panel="shipping"><div class="panel shipping-wizard"><div class="panel-header"><div><h2>تحديث شركة الشحن</h2><p class="panel-subtitle">تتم المطابقة بالاسم ورقم الهاتف فقط؛ لن يتم إنشاء طلبات جديدة.</p></div></div><div class="import-wizard-steps" id="shippingWizardSteps"><span class="active" data-shipping-step-indicator="1">1. الملف</span><span data-shipping-step-indicator="2">2. معاينة</span><span data-shipping-step-indicator="3">3. تحقق</span><span data-shipping-step-indicator="4">4. مطابقة</span><span data-shipping-step-indicator="5">5. مراجعة</span><span data-shipping-step-indicator="6">6. حفظ</span></div><div class="shipping-stage active" data-shipping-stage="1"><label class="dropzone" for="shippingFileInput"><div class="dz-icon">📦</div><div>اختر ملف شركة الشحن</div><div class="panel-subtitle">الأعمدة المطلوبة: اسم العميل، رقم الهاتف، رقم البوليصة، المحافظة</div></label><input id="shippingFileInput" type="file" accept=".xlsx,.xls,.csv" style="display:none"><div class="wizard-actions"><button class="btn btn-accent" id="shippingAnalyzeBtn" type="button">تحليل الملف</button></div></div><div class="shipping-stage" data-shipping-stage="2"><div id="shippingPreview"></div><div class="wizard-actions"><button class="btn" data-shipping-back="1" type="button">السابق</button><button class="btn btn-accent" data-shipping-next="3" type="button">التالي: التحقق</button></div></div><div class="shipping-stage" data-shipping-stage="3"><div id="shippingValidation"></div><div class="wizard-actions"><button class="btn" data-shipping-back="2" type="button">السابق</button><button class="btn btn-accent" id="shippingMatchBtn" type="button">بدء المطابقة</button></div></div><div class="shipping-stage" data-shipping-stage="4"><div id="shippingMatching"></div><div class="wizard-actions"><button class="btn" data-shipping-back="3" type="button">السابق</button><button class="btn btn-accent" data-shipping-next="5" type="button">مراجعة النتائج</button></div></div><div class="shipping-stage" data-shipping-stage="5"><div class="orders-toolbar"><label>تطبيق حالة على جميع النتائج <select id="shippingApplyStatus"><option value="لم يتم التحديث">لم يتم التحديث</option><option>تم التسليم</option><option>مرتجع</option><option>مؤجل</option><option>في الشحن</option></select></label><button class="btn btn-sm" id="shippingApplyStatusBtn" type="button">تطبيق</button></div><div class="table-wrap"><table><thead><tr><th>اسم العميل</th><th>الهاتف</th><th>الموظف</th><th>القسم</th><th>رقم البوليصة</th><th>المحافظة</th><th>حالة الشحنة</th></tr></thead><tbody id="shippingResultsBody"></tbody></table></div><div class="wizard-actions"><button class="btn" data-shipping-back="4" type="button">السابق</button><button class="btn btn-accent" id="shippingSaveBtn" type="button">حفظ التحديثات</button></div></div><div class="shipping-stage" data-shipping-stage="6"><div class="hint-box" id="shippingSuccess"></div><button class="btn" id="shippingRestartBtn" type="button">استيراد ملف آخر</button></div></div></div>
+      <div class="orders-center-panel" data-orders-panel="reports"><div class="panel"><div class="panel-header"><div><h2>تقارير الطلبات</h2><p class="panel-subtitle">تحليل تشغيلي ومالي للطلبات المطابقة للفلاتر.</p></div></div><div class="orders-filters"><select id="ordersReportType"><option value="general">تقرير عام</option><option value="department">تقرير قسم</option><option value="employee">تقرير موظف</option></select><input type="date" id="ordersReportDateFrom" title="من تاريخ"><input type="date" id="ordersReportDateTo" title="إلى تاريخ"><select id="ordersReportDepartment"><option value="">كل الأقسام</option></select><select id="ordersReportEmployee"><option value="">كل الموظفين</option></select><select id="ordersReportGovernorate"><option value="">كل المحافظات</option></select><select id="ordersReportProduct"><option value="">كل المنتجات</option></select><select id="ordersReportStatus"><option value="">كل الحالات</option></select><button type="button" class="btn btn-accent" id="ordersGenerateReportBtn">إنشاء التقرير</button></div><div id="ordersReportOutput" class="hidden"><div id="ordersReportTitle" class="hint-box"></div><div class="cards-grid cards-grid-compact orders-summary" id="ordersReportMetrics"></div><div class="panel" style="margin-top:16px"><h3>ملخص مالي</h3><div class="cards-grid cards-grid-compact" id="ordersReportFinancial"></div></div><div class="panel" style="margin-top:16px"><div class="panel-header"><h3>الطلبات المطابقة</h3><div><button class="btn btn-sm" id="ordersReportExcelBtn" type="button">تصدير Excel</button><button class="btn btn-sm" id="ordersReportPdfBtn" type="button">تصدير PDF</button><button class="btn btn-sm" id="ordersReportPrintBtn" type="button">طباعة</button></div></div><div class="table-wrap"><table><thead><tr><th>التاريخ</th><th>رقم الطلب</th><th>العميل</th><th>المنتج</th><th>العبوات</th><th>السعر</th><th>الموظف</th><th>القسم</th><th>المحافظة</th><th>الحالة</th></tr></thead><tbody id="ordersReportTableBody"></tbody></table></div></div></div></div></div>
+    </section>
+
+    <!-- ===================== VIEW: MONTH MANAGEMENT ===================== -->
+    <section class="view" id="view-months">
+      <div class="panel active-month-panel">
+        <div class="panel-header months-header">
+          <div><h2>إدارة الشهور</h2><p class="panel-subtitle">التحكم في دورة العمل، الاعتماد، القفل والأرشفة من مكان واحد</p></div>
+          <button class="btn btn-accent" id="monthsCreateBtn">➕ إنشاء شهر</button>
+        </div>
+        <div class="cards-grid cards-grid-compact months-overview" aria-live="polite">
+          <div class="stat-card"><div class="stat-label">الشهر النشط</div><div class="stat-value" id="monthsOverviewActive">—</div></div>
+          <div class="stat-card"><div class="stat-label">شهور مفتوحة</div><div class="stat-value" id="monthsOverviewOpen">0</div></div>
+          <div class="stat-card"><div class="stat-label">شهور مقفلة</div><div class="stat-value" id="monthsOverviewLocked">0</div></div>
+          <div class="stat-card"><div class="stat-label">شهور مؤرشفة</div><div class="stat-value" id="monthsOverviewArchived">0</div></div>
+        </div>
+        <div class="hint-box months-lifecycle-note">
+          <strong>الاعتماد والقفل عملية واحدة آمنة:</strong> يتم حفظ Snapshot وBackup قبل قفل الشهر. لا يمكن أرشفة الشهر النشط أو استيراد طلبات داخل شهر مؤرشف.
+        </div>
+        <div class="table-wrap">
+          <table class="months-table">
+            <thead><tr>
+              <th>الشهر</th><th>الحالة</th><th>الطلبات</th><th>الموظفون</th><th>إجمالي المبيعات</th><th>إجمالي الرواتب</th><th>إجمالي البونص</th><th>تاريخ الإنشاء</th><th>آخر تعديل</th><th>القفل</th><th>الأرشفة</th><th>إجراءات</th>
+            </tr></thead>
+            <tbody id="monthsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== VIEW: MONTH COMPARISON (READ ONLY) ===================== -->
+    <section class="view" id="view-month-comparison">
+      <div class="panel">
+        <div class="panel-header"><div><h2>مقارنة الشهور</h2><p class="panel-subtitle">قراءة فقط من التقارير المحفوظة — لا يتم تشغيل الحساب أو تعديل أي بيانات.</p></div></div>
+        <div class="month-comparison-selectors">
+          <label>الشهر الأول <select id="comparisonMonthOne"></select></label>
+          <label>الشهر الثاني <select id="comparisonMonthTwo"></select></label>
+        </div>
+        <div class="hint-box comparison-readonly-note">تُعرض بيانات كل شهر كما حُفظت في تقريره. لا يمكن اختيار الشهر نفسه مرتين.</div>
+      </div>
+
+      <div id="comparisonEmptyState" class="panel comparison-empty-state">اختر شهرين لهما تقارير محفوظة لبدء المقارنة.</div>
+      <div id="comparisonContent" class="hidden">
+        <div class="comparison-legend"><span id="comparisonMonthOneLabel">—</span><span>مقابل</span><span id="comparisonMonthTwoLabel">—</span></div>
+        <div class="comparison-metrics" id="comparisonMetrics"></div>
+
+        <div class="comparison-chart-grid">
+          <div class="panel comparison-chart"><h3>الطلبات</h3><canvas id="comparisonOrdersChart"></canvas></div>
+          <div class="panel comparison-chart"><h3>الرواتب</h3><canvas id="comparisonSalariesChart"></canvas></div>
+          <div class="panel comparison-chart"><h3>البونص</h3><canvas id="comparisonBonusChart"></canvas></div>
+          <div class="panel comparison-chart"><h3>صافي المستحقات</h3><canvas id="comparisonNetChart"></canvas></div>
+        </div>
+
+        <div class="comparison-insights-grid" id="comparisonInsights"></div>
+
+        <div class="panel">
+          <div class="panel-header"><div><h2>مقارنة الموظفين</h2><p class="panel-subtitle">مرتبطة بصفوف التقارير المحفوظة في كل شهر.</p></div></div>
+          <div class="toolbar comparison-toolbar">
+            <input class="search-input" id="comparisonEmployeeSearch" placeholder="🔍 بحث عن موظف أو قسم...">
+            <select id="comparisonDepartmentFilter" aria-label="فلترة القسم"><option value="all">كل الأقسام</option></select>
+          </div>
+          <div class="table-wrap"><table class="comparison-table"><thead><tr>
+            <th data-comparison-sort="name">اسم الموظف</th><th data-comparison-sort="departmentName">القسم</th>
+            <th data-comparison-sort="ordersOne">طلبات الشهر الأول</th><th data-comparison-sort="ordersTwo">طلبات الشهر الثاني</th><th data-comparison-sort="ordersDelta">الفرق</th>
+            <th data-comparison-sort="bonusDelta">فرق البونص</th><th data-comparison-sort="netDelta">فرق صافي المرتب</th><th data-comparison-sort="netPercent">نسبة التغيير</th>
+          </tr></thead><tbody id="comparisonEmployeesBody"></tbody></table></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><div><h2>مقارنة الأقسام</h2><p class="panel-subtitle">من الملخصات المحفوظة مع التقرير.</p></div></div>
+          <div class="table-wrap"><table class="comparison-table"><thead><tr>
+            <th>القسم</th><th>الموظفون (1 / 2)</th><th>الطلبات (1 / 2)</th><th>البونص (1 / 2)</th><th>الرواتب (1 / 2)</th><th>النمو</th>
+          </tr></thead><tbody id="comparisonDepartmentsBody"></tbody></table></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== VIEW: REPORT ===================== -->
+    <section class="view" id="view-report">
+      <div class="panel">
+        <div class="panel-header">
+          <div><h2>Salary Processing Center — <span id="reportScopeLabel">كل الأقسام</span> <span class="badge badge-locked" id="reportApprovalBadge">غير معتمد</span></h2><p class="panel-subtitle">إنشاء ومراجعة واعتماد نسخة رواتب مستقلة للفترة الحالية.</p></div>
+        </div>
+        <div class="hint-box" id="reportApprovalNotice"></div>
+        <div class="hint-box">
+          <strong>صافي الراتب = الراتب الشهري الثابت (بالتناسب حسب تاريخ التعيين) + البونص (لأقسام البونص فقط) + التسويات − السلف − الدين السابق</strong><br>
+          لو السلف أكبر من المستحق، الشهر بيتقفل على صفر والباقي بيتسجل في عمود
+          <strong>"مرحّل للشهر القادم"</strong> وبيتخصم أوتوماتيك أول ما تحسب الشهر اللي بعده.
+          لو عايز تسقط دين عن موظف، ضيفه كـ <strong>تسوية يدوية بمبلغ موجب</strong>.<br>
+          استخدم فلتر الأقسام في الأعلى عشان تعرض وتصدّر تقرير <strong>الشركة كلها</strong> أو <strong>قسم واحد</strong>.
+          التقارير القديمة بتفضل بأسماء الأقسام وأرقامها زي ما اتحسبت بالظبط.
+        </div>
+        <div class="close-summary" id="reportFinancialSummary" aria-live="polite"></div>
+        <section class="salary-snapshot-dashboard hidden" id="salarySnapshotDashboard"><div class="salary-workflow" id="salaryWorkflow"></div><div class="cards-grid cards-grid-compact" id="salaryExecutiveSummary"></div><div class="charts-grid salary-snapshot-charts" id="salarySnapshotCharts"><div class="chart-card"><h3>توزيع الرواتب حسب الأقسام</h3><canvas id="salaryChartDepartments"></canvas><div class="widget-empty hidden" id="salaryChartDepartmentsEmpty">No data available yet</div></div><div class="chart-card"><h3>توزيع البونص</h3><canvas id="salaryChartBonus"></canvas><div class="widget-empty hidden" id="salaryChartBonusEmpty">No data available yet</div></div><div class="chart-card"><h3>توزيع العمولات</h3><canvas id="salaryChartCommission"></canvas><div class="widget-empty hidden" id="salaryChartCommissionEmpty">No data available yet</div></div><div class="chart-card"><h3>الموظفون حسب نوع الراتب</h3><canvas id="salaryChartTypes"></canvas><div class="widget-empty hidden" id="salaryChartTypesEmpty">No data available yet</div></div><div class="chart-card"><h3>الموظفون حسب الأقسام</h3><canvas id="salaryChartHeadcount"></canvas><div class="widget-empty hidden" id="salaryChartHeadcountEmpty">No data available yet</div></div></div><div class="dashboard-insights-grid"><div class="panel"><div class="panel-header"><h3>Payroll KPIs</h3></div><div class="dashboard-insights" id="salaryKpis"></div></div><div class="panel"><div class="panel-header"><h3>ملخص الأقسام</h3></div><div class="dashboard-insights" id="salaryDepartmentSummary"></div></div></div><div class="panel" id="salaryRankingPanel"><div class="panel-header"><div><h3>ترتيب الموظفين</h3><p class="panel-subtitle">ترتيب مستقل مبني على Salary Processing Snapshot.</p></div><div class="wizard-actions"><select id="salaryRankingMetric" aria-label="معيار ترتيب الموظفين"><option value="net">صافي المستحق</option><option value="sales">إجمالي المبيعات</option><option value="orders">عدد الطلبات</option><option value="packages">عدد العبوات</option><option value="bonus">قيمة البونص</option><option value="commission">قيمة العمولة</option></select><select id="salaryRankingDirection" aria-label="اتجاه الترتيب"><option value="desc">الأعلى أولاً</option><option value="asc">الأقل أولاً</option></select></div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>الاسم</th><th>القسم</th><th>نوع الراتب</th><th id="salaryRankingValueHeader">صافي المستحق</th></tr></thead><tbody id="salaryRankingBody"></tbody></table></div></div><div class="panel"><div class="panel-header"><h3>مراجعة Snapshot الرواتب</h3><div><button class="btn btn-sm" id="salarySnapshotExcelBtn" type="button">Export Excel</button><button class="btn btn-sm" id="salarySnapshotPrintBtn" type="button">Print</button></div></div><div class="table-wrap"><table><thead><tr><th>الموظف</th><th>القسم</th><th>الأساسي</th><th>البونص</th><th>العمولة</th><th>الإضافات</th><th>الخصومات</th><th>الصافي</th><th>إجراءات</th></tr></thead><tbody id="salarySnapshotRows"></tbody></table></div></div><div class="panel"><div class="panel-header"><h3>صرف الرواتب</h3><button class="btn btn-accent" id="salaryMarkAllPaidBtn" type="button">Mark All as Paid</button></div><div class="table-wrap"><table><thead><tr><th>الموظف</th><th>القسم</th><th>صافي المستحق</th><th>حالة الدفع</th><th>تاريخ الدفع</th><th>سجل بواسطة</th><th>إجراء</th></tr></thead><tbody id="salaryPaymentBody"></tbody></table></div></div></section>
+        <div class="toolbar">
+          <button class="btn btn-accent" id="calculateBtn">🧮 حساب</button>
+          <button class="btn btn-accent" id="approveReportBtn">✅ اعتماد التقرير</button>
+          <button class="btn btn-accent" id="salarySnapshotApproveBtn" data-permission="salary_processing.approve">Approve Payroll</button><span class="badge badge-locked" id="salaryProcessingStatus">Draft</span>
+          <button class="btn" id="exportExcelBtn">📊 تصدير Excel</button>
+          <button class="btn" id="exportPdfBtn">📄 تصدير PDF</button>
+          <button class="btn" id="copyReportBtn">📋 نسخ التقرير</button>
+          <button class="btn" id="printReportBtn">🖨️ طباعة</button>
+          <input type="text" class="search-input" id="reportSearch" placeholder="🔍 بحث عن موظف...">
+        </div>
+        <div class="table-wrap">
+          <table id="reportTable">
+            <thead>
+              <tr>
+                <th data-sort="name">اسم الموظف</th>
+                <th data-sort="departmentName">القسم</th>
+                <th data-sort="workedHours">ساعات العمل</th>
+                <th data-sort="salary">الراتب الأساسي</th>
+                <th data-sort="totalBonus">إجمالي البونص</th>
+                <th data-sort="totalAdjustments">تسويات يدوية</th>
+                <th data-sort="totalAdvances">السلف</th>
+                <th data-sort="previousDebt">دين سابق</th>
+                <th data-sort="finalSalary">صافي المستحق</th>
+                <th data-sort="carriedDebt">مرحّل للشهر القادم</th>
+                <th data-sort="ordersCount">عدد الطلبات</th>
+                <th data-sort="totalPackages">عدد الطرود</th>
+                <th data-sort="totalSales">إجمالي المبيعات</th>
+              </tr>
+            </thead>
+            <tbody id="reportTableBody"></tbody>
+            <tfoot id="reportTableFoot"></tfoot>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== VIEW: TRANSACTIONS (السلف والتسويات) =====================
+         The two forms are tabbed because they are alternative ACTIONS, but the
+         table below is deliberately unified: an admin reviewing a month wants
+         one chronological ledger of everything that moved an employee's pay,
+         not two lists to reconcile by eye. -->
+    <section class="view" id="view-transactions">
+      <div class="panel" hidden>
+        <div class="panel-header">
+          <h2>السلف والتسويات — شهر <span id="transactionsMonthLabel">-</span></h2>
+        </div>
+
+        <div class="tabs" role="tablist" hidden>
+          <button class="tab-btn active" id="tabAdvancesBtn" data-tab="advances"
+                  role="tab" aria-selected="true" aria-controls="tabPanelAdvances">
+            💵 تسجيل سلفة
+          </button>
+          <button class="tab-btn" id="tabAdjustmentsBtn" data-tab="adjustments"
+                  role="tab" aria-selected="false" aria-controls="tabPanelAdjustments">
+            🔧 إضافة تسوية
+          </button>
+        </div>
+
+        <!-- TAB: advances -->
+        <div class="tab-panel active" id="tabPanelAdvances" role="tabpanel" hidden>
+          <form id="advanceForm" class="inline-form">
+            <div class="field">
+              <label for="advanceModeratorInput">الموظف</label>
+              <input type="text" id="advanceModeratorInput" list="moderatorDatalist" required placeholder="اكتب اسم الموظف">
+            </div>
+            <div class="field">
+              <label for="advanceAmountInput">مبلغ السلفة (ج.م)</label>
+              <input type="number" id="advanceAmountInput" required min="0" step="1" placeholder="مثال: 1000">
+            </div>
+            <div class="field">
+              <label for="advanceDateInput">تاريخ الصرف</label>
+              <input type="date" id="advanceDateInput" required>
+            </div>
+            <div class="field">
+              <label for="advanceNoteInput">ملاحظة (اختياري)</label>
+              <input type="text" id="advanceNoteInput" placeholder="مثال: سلفة شخصية">
+            </div>
+            <button type="submit" class="btn btn-accent">➕ تسجيل سلفة</button>
+          </form>
+          <div class="hint-box">
+            كل سلفة بتتسجل تحت شهر تاريخ صرفها، وبتتخصم تلقائيًا من صافي راتب الموظف لما تحسب تقرير الشهر ده.
+          </div>
+        </div>
+
+        <!-- TAB: adjustments -->
+        <div class="tab-panel" id="tabPanelAdjustments" role="tabpanel" hidden>
+          <form id="adjustmentForm" class="inline-form">
+            <div class="field">
+              <label for="adjustmentModeratorInput">الموظف</label>
+              <input type="text" id="adjustmentModeratorInput" list="moderatorDatalist" required placeholder="اكتب اسم الموظف">
+            </div>
+            <div class="field">
+              <label for="adjustmentAmountInput">المبلغ (ج.م)</label>
+              <input type="number" id="adjustmentAmountInput" required step="1" placeholder="موجب للإضافة، سالب للخصم مثل -200">
+            </div>
+            <div class="field">
+              <label for="adjustmentDateInput">التاريخ</label>
+              <input type="date" id="adjustmentDateInput" required>
+            </div>
+            <div class="field">
+              <label for="adjustmentReasonInput">السبب</label>
+              <input type="text" id="adjustmentReasonInput" placeholder="مثال: تغطية شفت ليوم كذا">
+            </div>
+            <button type="submit" class="btn btn-accent">➕ إضافة تسوية</button>
+          </form>
+          <div class="hint-box">
+            اكتب المبلغ <strong>موجب</strong> لو هتزود للموظف (مثلاً غطى شفت زميله)، أو <strong>سالب</strong> لو هتخصم منه
+            (مثلاً -200). التسوية بتتحسب تلقائيًا مع صافي راتب الشهر اللي فيه تاريخها.
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><h2>تسجيل سلفة أو تسوية</h2></div>
+        <form id="transactionForm" class="inline-form">
+          <div class="field"><label for="transactionEmployeeInput">الموظف</label><select id="transactionEmployeeInput" required></select></div>
+          <div class="field"><label for="transactionTypeInput">نوع العملية</label><select id="transactionTypeInput" required><option value="advance">سلفة</option><option value="adjustment">تسوية</option></select></div>
+          <div class="field"><label for="transactionAmountInput">المبلغ (ج.م)</label><input type="number" id="transactionAmountInput" required step="1" placeholder="مثال: 1000"></div>
+          <div class="field"><label for="transactionDateInput">التاريخ</label><input type="date" id="transactionDateInput" required></div>
+          <div class="field"><label for="transactionNoteInput">الملاحظة</label><input type="text" id="transactionNoteInput" placeholder="ملاحظة اختيارية"></div>
+          <button type="submit" class="btn btn-accent" id="transactionSaveBtn">💾 حفظ العملية</button>
+          <button type="button" class="btn hidden" id="transactionCancelEditBtn">إلغاء التعديل</button>
+        </form>
+        <div class="hint-box" id="transactionFormHint">السلفة تُسجل بمبلغ موجب وتُخصم من المستحقات. التسوية تقبل مبلغًا موجبًا للإضافة أو سالبًا للخصم.</div>
+      </div>
+      <!-- UNIFIED LEDGER -->
+      <div class="panel">
+        <div class="panel-header">
+          <h2>جميع العمليات</h2>
+          <span class="rate-badge">
+            السلف: <strong id="ledgerAdvancesTotal">0</strong>
+            &nbsp;•&nbsp; التسويات: <strong id="ledgerAdjustmentsTotal">0</strong>
+            &nbsp;•&nbsp; الصافي: <strong id="ledgerNetTotal">0</strong>
+          </span>
+        </div>
+        <div class="toolbar">
+          <input type="text" class="search-input" id="ledgerSearch" placeholder="🔍 بحث باسم الموظف...">
+          <select id="ledgerEmployeeFilter" class="search-input" title="فلتر الموظف"></select>
+          <select id="ledgerDepartmentFilter" class="search-input" title="فلتر القسم"></select>
+          <select id="ledgerTypeFilter" class="search-input" title="فلتر نوع العملية">
+            <option value="all">كل العمليات</option>
+            <option value="advance">السلف فقط</option>
+            <option value="adjustment">التسويات فقط</option>
+          </select>
+          <input type="date" id="ledgerDateFilter" class="search-input" title="فلتر التاريخ">
+        </div>
+        <div class="table-wrap">
+          <table id="ledgerTable">
+            <thead>
+              <tr>
+                <th>الموظف</th>
+                <th>نوع العملية</th>
+                <th>المبلغ</th>
+                <th>التاريخ</th>
+                <th>الحالة</th>
+                <th>الملاحظة</th>
+                <th>إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="ledgerTableBody"></tbody>
+            <tfoot id="ledgerTableFoot"></tfoot>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== VIEW: FINAL SETTLEMENT ===================== -->
+    <section class="view" id="view-settlement">
+      <div class="panel">
+        <div class="panel-header">
+          <h2>تسوية مستحقات الموظف (مخالصة نهاية الخدمة)</h2>
+        </div>
+        <div class="hint-box">
+          الصفحة دي بتحسب مستحقات موظف سايب الشغل، لحد <strong>آخر يوم عمل</strong>:
+          الراتب بالتناسب لعدد أيام الشهر اللي اشتغلها، زائد البونص المستحق، زائد التسويات،
+          ناقص السلف والدين السابق.<br>
+          بعد <strong>اعتماد التسوية</strong>: حالة الموظف بتبقى <strong>غير نشط</strong>،
+          وبيختفي من حساب الرواتب للشهور الجديدة، لكن
+          <strong>كل بياناته وتاريخه بيتحفظوا بالكامل</strong> ومش بيتحذف أي حاجة.
+        </div>
+
+        <form id="settlementForm" class="inline-form">
+          <div class="field">
+            <label for="settlementEmployeeInput">الموظف</label>
+            <input type="text" id="settlementEmployeeInput" list="activeEmployeeDatalist"
+                   required placeholder="اكتب اسم الموظف">
+          </div>
+          <div class="field">
+            <label for="settlementLastDayInput">تاريخ آخر يوم عمل</label>
+            <input type="date" id="settlementLastDayInput" required>
+          </div>
+          <div class="field">
+            <label for="settlementNoteInput">ملاحظات / سبب ترك العمل (اختياري)</label>
+            <input type="text" id="settlementNoteInput" placeholder="مثال: استقالة">
+          </div>
+          <button type="submit" class="btn btn-accent">🧮 احسب المستحقات</button>
+        </form>
+        <datalist id="activeEmployeeDatalist"></datalist>
+      </div>
+
+      <!-- REVIEW SCREEN: nothing is written until this is approved -->
+      <div class="panel hidden" id="settlementReviewPanel">
+        <div class="panel-header">
+          <h2>شاشة مراجعة التسوية</h2>
+          <span class="rate-badge">لم يتم الحفظ بعد — راجع الأرقام ثم اعتمد</span>
+        </div>
+
+        <div class="settlement-head" id="settlementHead"></div>
+
+        <h4 class="modal-section-title">تفاصيل الحساب</h4>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>البند</th>
+                <th>التفاصيل</th>
+                <th>المبلغ</th>
+              </tr>
+            </thead>
+            <tbody id="settlementBreakdownBody"></tbody>
+            <tfoot id="settlementBreakdownFoot"></tfoot>
+          </table>
+        </div>
+
+        <div class="error-box" id="settlementWarnings" style="display:none"></div>
+
+        <div class="toolbar" style="margin-top:20px">
+          <button class="btn btn-accent" id="approveSettlementBtn">✅ اعتماد التسوية</button>
+          <button class="btn" id="cancelSettlementBtn">إلغاء</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><h2>التسويات المعتمدة</h2></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>الموظف</th>
+                <th>القسم</th>
+                <th>آخر يوم عمل</th>
+                <th>شهر التسوية</th>
+                <th>صافي المستحق</th>
+                <th>تاريخ الاعتماد</th>
+                <th>بواسطة</th>
+                <th>إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="settlementsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== VIEW: ARCHIVE ===================== -->
+    <section class="view" id="view-archive">
+      <div class="panel">
+        <div class="panel-header">
+          <h2>أرشيف الشهور المقفولة</h2>
+          <span class="rate-badge">عرض فقط — <strong>يمنع تعديل أي شهر مقفول</strong></span>
+        </div>
+        <div class="hint-box">
+          الشهور اللي هنا تم إنهاؤها وقفلها، وكل شهر محفوظ بنسخة ثابتة من نتائجه
+          (أسماء الأقسام وأرقامها زي ما كانت وقت الحساب بالظبط).
+          اضغط <strong>عرض التفاصيل</strong> لاستعراض تقرير أي شهر — بدون أي إمكانية للتعديل.
+        </div>
+        <div class="toolbar">
+          <input type="text" class="search-input" id="archiveSearch" placeholder="🔍 بحث بالشهر (مثال: 2026 أو أغسطس)">
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>الشهر</th>
+                <th>عدد الموظفين</th>
+                <th>إجمالي الرواتب</th>
+                <th>إجمالي البونص</th>
+                <th>إجمالي السلف</th>
+                <th>ديون مرحّلة</th>
+                <th>تم الإنهاء بواسطة</th>
+                <th>تاريخ الإنهاء</th>
+                <th>إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="archiveTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== VIEW: BACKUPS (النسخ الاحتياطية) =====================
+         Restorable point-in-time copies of the LIVE data (employees,
+         departments, advances, adjustments, settings).
+
+         Not to be confused with the per-month backup written when a month is
+         closed: that one freezes one month's inputs under the month document
+         as permanent evidence and is never restored. These are the ones you
+         restore FROM. -->
+    <section class="view" id="view-backups">
+
+      <div class="panel">
+        <div class="panel-header">
+          <div><h2>Backup &amp; Restore Center</h2><p class="panel-subtitle">إنشاء، فحص، تصدير واستعادة النسخ الاحتياطية الموثوقة.</p></div>
+          <div class="toolbar" style="margin:0">
+            <button class="btn btn-accent" id="createBackupBtn">📦 إنشاء نسخة احتياطية الآن</button>
+            <button class="btn btn-sm" type="button" data-backup-scope="orders">الطلبات فقط</button>
+            <button class="btn btn-sm" type="button" data-backup-scope="salary_processing">الرواتب فقط</button>
+            <button class="btn btn-sm" type="button" data-backup-scope="settings">الإعدادات فقط</button>
+            <button class="btn btn-sm" type="button" data-backup-scope="roles">الأدوار فقط</button>
+            <button class="btn btn-sm" type="button" data-backup-scope="audit">التدقيق فقط</button>
+            <button class="btn btn-danger-outline" id="clearOpenOperationsBtn">🧹 تصفير بيانات التشغيل</button>
+            <button class="btn btn-sm" id="refreshBackupsBtn">🔄 تحديث</button>
+          </div>
+        </div>
+        <div class="hint-box">
+          النسخة الاحتياطية بتشمل: <strong>الموظفين، الأقسام، السلف، التسويات، الإعدادات</strong>
+          — بنفس المعرّفات (IDs) بالظبط، عشان كل الروابط بين البيانات تفضل سليمة عند الاسترجاع.<br>
+          <strong>نسخ تلقائية</strong> بتتعمل قبل: إنهاء الشهر، أي استرجاع، حذف أي موظف،
+          مسح بيانات شهر، اعتماد أي مخالصة، وأرشفة أي قسم.<br>
+          <strong>الاسترجاع مابيحذفش أي حاجة</strong> — بيرجّع الناقص ويحدّث المختلف بس، وأي سجل
+          اتضاف بعد النسخة بيفضل زي ما هو. والشهور المقفولة <strong>مابتتغيرش خالص</strong>.
+        </div>
+        <div class="hint-box">
+          <strong>تصفير بيانات التشغيل:</strong> للمسؤول فقط. ينشئ النظام أولًا نسخة احتياطية إلزامية،
+          ثم يحذف <strong>السلف والتسويات الخاصة بالشهور المفتوحة فقط</strong>. لا يمس الموظفين أو الأقسام
+          أو الإعدادات أو المستخدمين أو الأشهر المقفلة أو المخالصات النهائية أو سجل التدقيق.
+        </div>
+        <div class="hint-box">
+          ⏰ <strong>النسخ اليومية المجدولة:</strong> البرنامج ده بيشتغل من المتصفح مباشرة وملوش
+          Backend، فمفيش طريقة أمينة نجدول بيها نسخة يومية تشتغل لوحدها — أي "نسخة يومية"
+          بتعتمد على إن حد يفتح الصفحة مش نسخة يومية حقيقية.
+          النظام متجهّز إن الميزة دي تتفعّل بإضافة <strong>Cloud Function</strong> مجدولة
+          بتنادي نفس الكود (<code>BackupService.runScheduled</code>) من غير أي تغيير تاني.
+        </div>
+      </div>
+
+      <div class="cards-grid cards-grid-compact">
+        <div class="stat-card"><div class="stat-icon">📦</div><div class="stat-value" id="cardBackupsTotal">0</div><div class="stat-label">إجمالي النسخ</div></div>
+        <div class="stat-card"><div class="stat-icon">👤</div><div class="stat-value" id="cardBackupsManual">0</div><div class="stat-label">نسخ يدوية</div></div>
+        <div class="stat-card"><div class="stat-icon">🤖</div><div class="stat-value" id="cardBackupsAuto">0</div><div class="stat-label">نسخ تلقائية</div></div>
+        <div class="stat-card"><div class="stat-icon">💾</div><div class="stat-value" id="cardBackupsSize">0</div><div class="stat-label">الحجم التقريبي الكلي</div></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h2>كل النسخ الاحتياطية</h2>
+          <span class="rate-badge">أحدث نسخة: <strong id="latestBackupLabel">—</strong></span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>اسم النسخة</th>
+                <th>النوع</th>
+                <th>سبب الإنشاء</th>
+                <th>المجموعات</th>
+                <th>السجلات</th>
+                <th>الحجم التقريبي</th>
+                <th>التاريخ والوقت / المستخدم</th>
+                <th>إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="backupsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== VIEW: AUDIT LOG ===================== -->
+    <section class="view" id="view-audit">
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Activity Log — سجل التدقيق</h2>
+          <div class="toolbar" style="margin:0">
+            <span class="rate-badge">المعروض: <strong id="auditLogCount">0 من 0</strong></span>
+            <button class="btn btn-sm" id="refreshAuditBtn">🔄 تحديث</button>
+          </div>
+        </div>
+        <div class="hint-box">
+          يعرض أحدث 100 عملية مسجلة. كل تعديل أو حذف في البيانات يرافقه سجل تدقيق في نفس عملية الحفظ؛
+          كما تظهر عمليات الاعتماد والأرشفة والنسخ الاحتياطي وتصفير بيانات التشغيل هنا.
+        </div>
+        <div class="toolbar">
+          <input type="text" class="search-input" id="auditSearch" placeholder="🔍 بحث بالعملية أو السجل أو المستخدم أو الشهر...">
+          <select id="auditSeverityFilter" class="search-input" title="فلتر درجة الخطورة">
+            <option value="all">كل درجات الخطورة</option>
+            <option value="info">عادية</option>
+            <option value="warning">تحذير</option>
+            <option value="critical">حرجة</option>
+          </select>
+          <select id="auditMonthFilter" class="search-input"><option value="all">كل الشهور</option></select>
+          <select id="auditUserFilter" class="search-input"><option value="all">كل المستخدمين</option></select>
+          <select id="auditActionFilter" class="search-input"><option value="all">كل العمليات</option></select>
+          <input type="date" id="auditDateFilter" class="search-input" title="فلترة التاريخ">
+          <select id="auditResultFilter" class="search-input"><option value="all">كل النتائج</option><option value="success">نجاح فقط</option><option value="errors">أخطاء/حرجة</option></select>
+        </div>
+        <div class="audit-timeline-stats" id="auditTimelineStats"></div>
+        <div class="audit-timeline" id="auditTimeline"></div>
+        <table class="hidden" aria-hidden="true"><tbody id="auditLogTableBody"></tbody></table>
+        <button class="btn btn-sm" id="auditLoadMoreBtn">تحميل المزيد</button>
+      </div>
+    </section>
+
+    <!-- ===================== VIEW: SETTINGS ===================== -->
+    <section class="view" id="view-settings">
+      <div class="panel configuration-center">
+        <div class="panel-header"><h2>Configuration Center</h2></div>
+        <div class="config-tabs" role="tablist"><button type="button" class="config-tab active" data-config-panel="company">🏢 الشركة</button><button type="button" class="config-tab" data-config-panel="bonus">🎁 إدارة البونص</button><button type="button" class="config-tab" data-config-panel="sources">🔗 مصادر البيانات</button><button type="button" class="config-tab" data-config-panel="roles">🛡 Roles &amp; Permissions</button></div>
+        <form id="settingsForm"><div class="config-panel active" data-config-content="company">
+          <div class="settings-card"><span class="settings-card-icon">🏢</span><div><h3>بيانات الشركة</h3><p>تظهر في التقارير والمستندات المطبوعة.</p></div><div class="field">
+            <label for="companyNameInput">اسم الشركة (يظهر في التقارير المطبوعة)</label>
+            <input type="text" id="companyNameInput" placeholder="اسم الشركة">
+          </div><div class="logo-placeholder">مكان مخصص لشعار الشركة — قريبًا</div></div>
+
+          </div><div class="config-panel" data-config-content="deductions"><h3 style="font-size:14px;margin:0 0 12px;color:var(--text-secondary)">ترحيل الديون</h3>
+          <label class="check-field" for="carryDebtInput">
+            <input type="checkbox" id="carryDebtInput">
+            <span>رحّل الدين للشهر القادم لو السلف أكبر من الراتب</span>
+          </label>
+          <div class="hint-box">
+            لما يكون الخيار ده <strong>مفعّل</strong>: لو مشرف أخد سلف أكتر من مستحقه، الشهر بيتقفل على
+            <strong>صفر</strong> والباقي بيتسجل كـ "مرحّل للشهر القادم" وبيتخصم أوتوماتيك من الشهر اللي بعده.<br>
+            لما يكون <strong>مقفول</strong>: صافي الراتب ممكن يطلع بالسالب ومفيش أي حاجة بتترحّل.<br>
+            الخيار ده كمان بيتخزن مع الشهر نفسه، فالشهور القديمة مش هتتأثر بتغييره.
+          </div>
+
+          </div><div class="config-panel" data-config-content="bonus"><div class="settings-card"><span class="settings-card-icon">🎁</span><div><h3>جدول البونص الافتراضي</h3><p>يُستخدم تلقائيًا للأقسام التي لا تملك Override خاصًا.</p></div><h3 style="font-size:14px;margin:14px 0 12px;color:var(--text-secondary)">حسب عدد العبوات فقط</h3>
+          <div class="bonus-rules-grid">
+            <div class="field"><label for="bonusRule1">1 عبوة</label><input type="number" id="bonusRule1" step="1"></div>
+            <div class="field"><label for="bonusRule2">2 عبوة</label><input type="number" id="bonusRule2" step="1"></div>
+            <div class="field"><label for="bonusRule3">3 عبوات</label><input type="number" id="bonusRule3" step="1"></div>
+            <div class="field"><label for="bonusRule4">4 عبوات</label><input type="number" id="bonusRule4" step="1"></div>
+            <div class="field"><label for="bonusRule5">5 عبوات</label><input type="number" id="bonusRule5" step="1"></div>
+            <div class="field"><label for="bonusRule6_9">6 إلى 9 عبوات</label><input type="number" id="bonusRule6_9" step="1"></div>
+            <div class="field"><label for="bonusRule10plus">10 عبوات فأكثر</label><input type="number" id="bonusRule10plus" step="1"></div>
+          </div>
+          <div class="hint-box">
+            التعديل هنا بيغيّر قيمة البونص لكل شريحة على مستوى الشركة، وبيتطبق على <strong>الشهور الجديدة</strong>.
+            أي قسم ليه جدول بونص خاص بيه بيتجاهل الجدول ده.
+            كل شهر بيحتفظ بجداول البونص بتاعته من أول مرة تحسب فيها التقرير، فالشهور القديمة بتفضل زي ما هي.
+          </div>
+
+          </div></div><div class="settings-card"><span class="settings-card-icon">💼</span><div><h3>إعدادات العمولة الافتراضية</h3><p>يتم احتساب العمولة لكل طلب حسب قيمة الطلب. أدخل الشرائح بالشكل: من قيمة ← إلى قيمة ← قيمة العمولة.</p><p>مثال: 100 → 500 = 5 جنيه، و501 → 700 = 10 جنيه.</p></div><div class="sales-tier sales-tier-header"><span>من قيمة</span><span>إلى قيمة</span><span>العمولة</span><span>إجراء</span></div><div id="companySalesBonusRules" class="sales-rules"></div><button type="button" class="btn" id="addCompanySalesTier">+ إضافة شريحة عمولة</button></div><button type="submit" class="btn btn-accent" style="margin-top:18px">💾 حفظ الإعدادات</button></div><div class="config-panel" data-config-content="sources"><div class="panel-header"><div><h3>مصادر البيانات</h3><p class="panel-subtitle">تهيئة مصادر طلبات الأقسام؛ لا يتم الاتصال أو المزامنة في هذه المرحلة.</p></div><button type="button" class="btn btn-accent" id="dataSourceAddBtn">إضافة مصدر جديد</button></div><div class="table-wrap"><table><thead><tr><th>القسم</th><th>نوع المصدر</th><th>اسم المصدر</th><th>حالة الاتصال</th><th>آخر مزامنة</th><th>آخر عدد أوردرات</th><th>الإجراءات</th></tr></thead><tbody id="dataSourcesBody"></tbody></table></div><div id="dataSourceEditor" class="settings-card hidden" style="margin-top:16px"><h3 id="dataSourceEditorTitle">مصدر بيانات</h3><input type="hidden" id="dataSourceId"><div class="field"><label>نوع المصدر</label><select id="dataSourceType"><option value="google-sheets">Google Sheets</option><option value="excel">Excel</option></select></div><div class="field"><label>القسم المرتبط</label><select id="dataSourceDepartment"></select></div><div class="field"><label>اسم المصدر</label><input id="dataSourceName" placeholder="اختياري"></div><div id="dataSourceGoogleFields"><div class="field"><label>رابط Google Sheet</label><input id="dataSourceUrl" type="url" placeholder="https://docs.google.com/spreadsheets/..."></div><div class="field"><label>اسم الـ Sheet</label><input id="dataSourceSheetName"></div><div class="field"><label>نطاق القراءة</label><input id="dataSourceRange" placeholder="A:Z (اختياري)"></div><button type="button" class="btn btn-sm" id="dataSourceTestBtn">اختبار صحة البيانات</button></div><div id="dataSourceExcelFields" class="hidden"><div class="field"><label>ملف Excel</label><input id="dataSourceExcelFile" type="file" accept=".xlsx,.xls"></div></div><div class="wizard-actions"><button type="button" class="btn" id="dataSourceCancelBtn">إلغاء</button><button type="button" class="btn btn-accent" id="dataSourceSaveBtn">حفظ المصدر</button></div></div></div>
+        </form>
+      </div>
+    </section>
+
+    <section class="view" id="view-users">
+      <div class="panel">
+        <div class="panel-header"><div><h2>إدارة المستخدمين والصلاحيات</h2><p class="muted">الحسابات تُنشأ عبر Firebase Authentication فقط.</p></div><button class="btn btn-sm" id="refreshUsersBtn">تحديث</button></div>
+        <div class="users-toolbar"><input class="search-input" id="usersSearch" placeholder="بحث بالبريد الإلكتروني..."><select id="usersStatusFilter"><option value="all">كل الحالات</option><option value="active">نشط</option><option value="suspended">موقوف مؤقتًا</option><option value="pending">بانتظار التفعيل</option><option value="disabled">معطّل</option></select></div>
+        <div class="table-wrap"><table><thead><tr><th>المستخدم</th><th>الدور</th><th>الحالة</th><th>آخر دخول</th><th>آخر نشاط</th><th>الجلسات</th><th>الصلاحيات الفعالة</th><th></th></tr></thead><tbody id="usersTableBody"></tbody></table></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ============================== MODAL: ADD/EDIT EMPLOYEE ============================== -->
+<div class="modal-backdrop" id="moderatorModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="moderatorModalTitle">إضافة موظف</h3>
+      <button class="icon-btn" id="closeModeratorModal">✕</button>
+    </div>
+    <form id="moderatorForm">
+      <div class="modal-body">
+        <input type="hidden" id="moderatorIdInput">
+        <div class="field">
+          <label for="moderatorNameInput">اسم الموظف</label>
+          <input type="text" id="moderatorNameInput" required placeholder="مثال: Hind">
+        </div>
+        <div class="field">
+          <label for="employeeDepartmentInput">القسم</label>
+          <select id="employeeDepartmentInput" required></select>
+        </div>
+        <div class="field" id="employeeFixedSalaryWrap">
+          <label for="employeeFixedSalaryInput">الراتب الشهري الثابت (ج.م)</label>
+          <input type="number" id="employeeFixedSalaryInput" min="0" step="0.01" placeholder="0" required>
+        </div>
+        <div class="field">
+          <label for="employeeDailyHoursInput">ساعات العمل في اليوم (اختياري - للعلم فقط)</label>
+          <input type="number" id="employeeDailyHoursInput" min="0" step="0.5" placeholder="مثال: 8">
+        </div>
+        <div class="field">
+          <label for="employeeStatusInput">الحالة</label>
+          <select id="employeeStatusInput">
+            <option value="active">نشط</option>
+            <option value="inactive">غير نشط</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="employeeHireDateInput">تاريخ التعيين (اختياري)</label>
+          <input type="date" id="employeeHireDateInput">
+        </div>
+        <div class="field">
+          <label for="employeeNotesInput">ملاحظات (اختياري)</label>
+          <input type="text" id="employeeNotesInput" placeholder="أي ملاحظات عن الموظف">
+        </div>
+        <div class="hint-box">
+          الأساسي = الراتب الشهري الثابت. لو الموظف اتعيّن في نص الشهر الحالي، بيتحسب
+          بالتناسب حسب تاريخ التعيين تلقائيًا.<br>
+          البونص بيتحسب أوتوماتيك من عدد الطرود/الطلبات، وبيتاخد بس لو قسم الموظف من
+          نوع <strong>"بونص"</strong>. أقسام <strong>"راتب ثابت"</strong> مالهاش بونص خالص.<br>
+          حقل "ساعات العمل في اليوم" للعلم فقط ومش بيدخل في حساب الراتب.<br>
+          لو نقلت الموظف لقسم تاني، ده هيأثر على <strong>الحسابات الجاية بس</strong> —
+          التقارير القديمة هتفضل زي ما هي بالقسم اللي كان فيه وقتها.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" id="cancelModeratorBtn" onclick="document.getElementById('moderatorModal').classList.remove('open')">إلغاء</button>
+        <button type="submit" class="btn btn-accent">💾 حفظ</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================== MODAL: ADD/EDIT DEPARTMENT ============================== -->
+<div class="modal-backdrop" id="departmentModal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 id="departmentModalTitle">إضافة قسم</h3>
+      <button class="icon-btn" id="closeDepartmentModal">✕</button>
+    </div>
+    <form id="departmentForm">
+      <div class="modal-body">
+        <input type="hidden" id="departmentIdInput">
+        <div class="field">
+          <label for="departmentNameInput">اسم القسم</label>
+          <input type="text" id="departmentNameInput" required placeholder="مثال: TikTok Team 1">
+        </div>
+        <div class="field">
+          <label for="departmentSalaryTypeInput">نوع الراتب</label>
+          <select id="departmentSalaryTypeInput">
+            <option value="hourly">بونص (راتب ثابت لكل موظف + بونص على الأوردرات)</option>
+            <option value="fixed">راتب ثابت فقط (بدون بونص)</option>
+            <option value="commission">راتب ثابت + عمولة على قيمة كل طلب</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="departmentColorInput">لون القسم</label>
+          <input type="color" id="departmentColorInput" class="color-input" value="#3d5afe">
+        </div>
+        <div class="field">
+          <label for="departmentNotesInput">ملاحظات (اختياري)</label>
+          <input type="text" id="departmentNotesInput" placeholder="وصف مختصر للقسم">
+        </div>
+
+        <div id="departmentHourlyFieldsWrap">
+          <label class="check-field" for="departmentBonusToggle">
+            <input type="checkbox" id="departmentBonusToggle">
+            <span>جدول بونص خاص بالقسم (بدل الجدول العام)</span>
+          </label>
+          <div class="field hidden" id="departmentBonusTypeWrap"><label>طريقة Bonus القسم</label><select id="departmentBonusType"><option value="packages">حسب عدد العبوات</option><option value="sales">حسب قيمة المبيعات</option></select></div><div id="departmentSalesBonusRules" class="sales-rules hidden"></div><button type="button" class="btn hidden" id="addDepartmentSalesTier">+ إضافة شريحة</button>
+
+          <div class="bonus-rules-grid hidden" id="departmentBonusGrid" style="margin-top:14px">
+            <div class="field"><label for="deptBonus1">1 عبوة</label><input type="number" id="deptBonus1" step="1"></div>
+            <div class="field"><label for="deptBonus2">2 عبوة</label><input type="number" id="deptBonus2" step="1"></div>
+            <div class="field"><label for="deptBonus3">3 عبوات</label><input type="number" id="deptBonus3" step="1"></div>
+            <div class="field"><label for="deptBonus4">4 عبوات</label><input type="number" id="deptBonus4" step="1"></div>
+            <div class="field"><label for="deptBonus5">5 عبوات</label><input type="number" id="deptBonus5" step="1"></div>
+            <div class="field"><label for="deptBonus6_9">6 إلى 9</label><input type="number" id="deptBonus6_9" step="1"></div>
+            <div class="field"><label for="deptBonus10plus">10 فأكثر</label><input type="number" id="deptBonus10plus" step="1"></div>
+          </div>
+        </div>
+
+        <div class="hint-box">
+          تغيير اسم القسم أو نوعه <strong>مش بيأثر على أي تقرير قديم</strong>. كل تقرير شهري
+          بيحتفظ بنسخة من اسم القسم وأرقامه وقت الحساب.<br>
+          الراتب الشهري الثابت بيتحدد لكل موظف من صفحة الموظفين مش من هنا، لكل الأقسام.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="document.getElementById('departmentModal').classList.remove('open')">إلغاء</button>
+        <button type="submit" class="btn btn-accent">💾 حفظ</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================== MODAL: EMPLOYEE DETAILS ============================== -->
+<div class="modal-backdrop" id="detailsModal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 id="detailsModalTitle">تفاصيل الموظف</h3>
+      <button class="icon-btn" id="closeDetailsModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="details-grid">
+        <div class="details-stat"><div class="v" id="detailsDepartment">-</div><div class="l">القسم</div></div>
+        <div class="details-stat"><div class="v" id="detailsWorkedHours">-</div><div class="l">ساعات العمل</div></div>
+        <div class="details-stat"><div class="v" id="detailsSalary">-</div><div class="l">الراتب</div></div>
+        <div class="details-stat"><div class="v" id="detailsBonus">-</div><div class="l">البونص</div></div>
+        <div class="details-stat"><div class="v" id="detailsAdjustments">-</div><div class="l">تسويات يدوية</div></div>
+        <div class="details-stat"><div class="v" id="detailsAdvances">-</div><div class="l">السلف</div></div>
+        <div class="details-stat"><div class="v" id="detailsPreviousDebt">-</div><div class="l">دين سابق</div></div>
+        <div class="details-stat"><div class="v" id="detailsFinalSalary">-</div><div class="l">صافي الراتب</div></div>
+        <div class="details-stat"><div class="v" id="detailsCarriedDebt">-</div><div class="l">مرحّل للشهر القادم</div></div>
+        <div class="details-stat"><div class="v" id="detailsOrdersCount">-</div><div class="l">عدد الطلبات</div></div>
+        <div class="details-stat"><div class="v" id="detailsPackagesCount">-</div><div class="l">عدد الطرود</div></div>
+        <div class="details-stat"><div class="v" id="detailsTotalSales">-</div><div class="l">إجمالي المبيعات</div></div>
+      </div>
+      <h4 style="font-size:13.5px;color:var(--text-secondary);margin-bottom:10px">توزيع الطلبات حسب عدد الطرود</h4>
+      <div class="dist-list" id="detailsDistribution"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== MODAL: LOCKED MONTH DETAILS (READ-ONLY) ============================== -->
+<div class="modal-backdrop" id="monthDetailsModal">
+  <div class="modal modal-xl">
+    <div class="modal-header">
+      <h3 id="monthDetailsTitle">تفاصيل الشهر</h3>
+      <button class="icon-btn" id="closeMonthDetailsModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="readonly-banner">
+        🔒 عرض فقط — هذا الشهر مقفول ولا يمكن تعديله.
+      </div>
+
+      <div class="details-grid" id="monthDetailsStats"></div>
+
+      <h4 class="modal-section-title">ملخص الأقسام</h4>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>القسم</th>
+              <th>عدد الموظفين</th>
+              <th>إجمالي الرواتب</th>
+              <th>إجمالي البونص</th>
+              <th>إجمالي السلف</th>
+              <th>صافي الرواتب</th>
+            </tr>
+          </thead>
+          <tbody id="monthDetailsDeptBody"></tbody>
+        </table>
+      </div>
+
+      <h4 class="modal-section-title">تقرير الموظفين</h4>
+      <div class="table-wrap table-wrap-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>اسم الموظف</th>
+              <th>القسم</th>
+              <th>الراتب</th>
+              <th>البونص</th>
+              <th>تسويات</th>
+              <th>السلف</th>
+              <th>دين سابق</th>
+              <th>صافي الراتب</th>
+              <th>مرحّل</th>
+            </tr>
+          </thead>
+          <tbody id="monthDetailsReportBody"></tbody>
+        </table>
+      </div>
+
+      <h4 class="modal-section-title">سجل العمليات لهذا الشهر</h4>
+      <div class="dist-list" id="monthDetailsAudit"></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn" id="monthDetailsCloseBtn">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== MODAL: CLOSE MONTH CONFIRMATION ============================== -->
+<div class="modal-backdrop" id="auditDetailsModal"><div class="modal modal-lg"><div class="modal-header"><h3>تفاصيل العملية</h3><button class="icon-btn" id="auditDetailsCloseBtn">✕</button></div><div class="modal-body" id="auditDetailsBody"></div><div class="modal-footer"><button class="btn" id="auditDetailsDoneBtn">إغلاق</button></div></div></div>
+<div class="modal-backdrop" id="salaryEmployeeDrawer"><div class="modal modal-lg"><div class="modal-header"><h3 id="salaryDrawerTitle">تفاصيل الموظف</h3><button class="icon-btn" id="salaryDrawerCloseBtn">✕</button></div><div class="modal-body"><div class="config-tabs" id="salaryDrawerTabs"><button class="config-tab active" data-salary-tab="overview">Overview</button><button class="config-tab" data-salary-tab="orders">Orders Summary</button><button class="config-tab" data-salary-tab="breakdown">Payroll Breakdown</button><button class="config-tab" data-salary-tab="adjustments">Adjustments</button><button class="config-tab" data-salary-tab="notes">Notes</button></div><div id="salaryDrawerBody"></div></div></div></div>
+<!-- Smart Approval is read-only: it assesses the persisted report before the
+     existing irreversible close confirmation is even opened. -->
+<div class="modal-backdrop" id="smartApprovalModal" aria-hidden="true">
+  <div class="modal modal-lg" role="dialog" aria-modal="true" aria-labelledby="smartApprovalTitle">
+    <div class="modal-header"><h3 id="smartApprovalTitle">Smart Approval</h3><button class="icon-btn" id="smartApprovalCloseBtn" type="button">✕</button></div>
+    <div class="modal-body">
+      <div id="smartApprovalLoading" class="smart-approval-loading">جاري فحص التقرير المحفوظ…</div>
+      <div id="smartApprovalResults" class="hidden">
+        <div class="smart-approval-score" id="smartApprovalScore"></div>
+        <div class="smart-approval-groups" id="smartApprovalGroups"></div>
+        <div class="smart-approval-summary" id="smartApprovalSummary"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn" id="smartApprovalCancelBtn">إلغاء</button>
+      <button type="button" class="btn btn-accent hidden" id="smartApprovalConfirmBtn">✅ متابعة الاعتماد</button>
+    </div>
+  </div>
+</div>
+
+<!-- A dedicated dialog rather than the generic Confirm: closing a month is
+     irreversible, so it lists exactly what is about to happen and requires
+     the admin to tick an acknowledgement before the button enables. -->
+<div class="modal-backdrop" id="closeMonthModal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3>تأكيد اعتماد التقرير</h3>
+      <button class="icon-btn" id="closeCloseMonthModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="confirm-lead">
+        أنت تعتمد تقرير شهر <strong id="closeMonthLabel">-</strong>. العملية دي
+        <strong class="text-danger">مش ممكن الرجوع فيها من البرنامج</strong>.
+      </p>
+
+      <div class="close-summary" id="closeMonthSummary"></div>
+
+      <h4 class="modal-section-title">اللي هيحصل بالترتيب</h4>
+      <ol class="close-steps">
+        <li>إنشاء <strong>Snapshot</strong> — نسخة ثابتة من نتائج الشهر (التقرير والإجماليات وملخص الأقسام).</li>
+        <li>إنشاء <strong>Backup</strong> — نسخة احتياطية من بيانات الشهر (الموظفين، السلف، التسويات، الأقسام، الإعدادات).</li>
+        <li>إنشاء <strong>Monthly Summary</strong> — ملخص شهري يُستخدم في التقارير لاحقًا.</li>
+        <li>تسجيل العملية في <strong>Audit Log</strong>.</li>
+        <li><strong>قفل الشهر</strong> — يصبح للعرض فقط.</li>
+        <li>إنشاء <strong>الشهر التالي</strong> وجعله <strong>الشهر النشط</strong>.</li>
+      </ol>
+
+      <div class="error-box" id="closeMonthWarnings" style="display:none"></div>
+
+      <label class="check-field" for="closeMonthAck">
+        <input type="checkbox" id="closeMonthAck">
+        <span>أنا متأكد إن بيانات التقرير كاملة وصحيحة، وموافق على اعتماده وقفل الشهر نهائيًا.</span>
+      </label>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn" id="cancelCloseMonthBtn">إلغاء</button>
+      <button type="button" class="btn btn-accent" id="confirmCloseMonthBtn" disabled>✅ اعتماد التقرير وقفل الشهر</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== MODAL: SETTLEMENT DETAILS (READ-ONLY) ============================== -->
+<div class="modal-backdrop" id="settlementDetailsModal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 id="settlementDetailsTitle">تفاصيل التسوية</h3>
+      <button class="icon-btn" id="closeSettlementDetailsModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="readonly-banner">
+        🔒 عرض فقط — التسوية المعتمدة سجل نهائي ولا يمكن تعديله.
+      </div>
+      <div class="details-grid" id="settlementDetailsStats"></div>
+
+      <h4 class="modal-section-title">تفاصيل الحساب</h4>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>البند</th><th>التفاصيل</th><th>المبلغ</th></tr>
+          </thead>
+          <tbody id="settlementDetailsBreakdown"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn" id="settlementDetailsCloseBtn">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== MODAL: RESTORE CONFIRMATION ============================== -->
+<!-- Restoring is the only action that overwrites live data wholesale, so it
+     gets the same treatment as closing a month: a full comparison of what
+     WILL change, an explicit list of what will NOT, and a required
+     acknowledgement before the button enables. -->
+<div class="modal-backdrop" id="restoreModal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3>تأكيد الاسترجاع من نسخة احتياطية</h3>
+      <button class="icon-btn" id="closeRestoreModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="confirm-lead">
+        هتسترجع من نسخة: <strong id="restoreBackupName">-</strong>
+      </p>
+      <div class="bk-note" id="restoreBackupMeta" style="margin-bottom:16px"></div>
+
+      <h4 class="modal-section-title">مقارنة الحالة الحالية بالنسخة</h4>
+      <div class="close-summary" id="restoreSummary"></div>
+
+      <div class="table-wrap" style="margin-top:16px">
+        <table>
+          <thead>
+            <tr>
+              <th>المجموعة</th>
+              <th>هيترجع</th>
+              <th>هيتحدّث</th>
+              <th>زي ما هو</th>
+              <th>أحدث من النسخة</th>
+              <th>مقفول</th>
+            </tr>
+          </thead>
+          <tbody id="restoreCompareBody"></tbody>
+        </table>
+      </div>
+
+      <h4 class="modal-section-title">اللي هيحصل بالترتيب</h4>
+      <ol class="close-steps">
+        <li>إنشاء <strong>نسخة احتياطية تلقائية للحالة الحالية</strong> (عشان تقدر ترجع).</li>
+        <li>إرجاع السجلات الناقصة بنفس معرّفاتها الأصلية.</li>
+        <li>تحديث السجلات المختلفة لتطابق النسخة.</li>
+        <li>تجاهل أي سجل في شهر مقفول، وترك أي سجل أحدث من النسخة زي ما هو.</li>
+        <li>تسجيل العملية في <strong>Audit Log</strong> بدرجة <strong>حرجة</strong>.</li>
+      </ol>
+
+      <div class="error-box" id="restoreWarnings" style="display:none"></div>
+
+      <label class="check-field" for="restoreAck">
+        <input type="checkbox" id="restoreAck">
+        <span>راجعت المقارنة فوق وموافق على الاسترجاع.</span>
+      </label>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn" id="cancelRestoreBtn">إلغاء</button>
+      <button type="button" class="btn btn-danger-outline" id="confirmRestoreBtn" disabled>♻️ تنفيذ الاسترجاع</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== MODAL: IMPORT PREVIEW (Excel) ============================== -->
+<!-- Shown after a file is chosen in the Excel import method, before anything
+     is written. Lets the admin review the row/column counts, correct the
+     Smart Column Mapping guess if needed, and see every validation problem
+     up front - nothing is imported until "تأكيد الاستيراد" is pressed. -->
+<div class="modal-backdrop" id="importPreviewModal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3>معاينة الاستيراد</h3>
+      <button class="icon-btn" id="closeImportPreviewModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="confirm-lead">
+        الملف: <strong id="importPreviewFileName">-</strong> —
+        سيتم الاستيراد إلى شهر <strong id="importPreviewMonth">-</strong>
+      </p>
+
+      <div class="hint-box" id="importPreviewQuickSummary" role="status"></div>
+      <div class="close-summary" id="importPreviewSummary"></div>
+
+      <h4 class="modal-section-title">مطابقة الأعمدة</h4>
+      <div class="hint-box">
+        النظام حاول يتعرف على الأعمدة تلقائيًا. راجع الاختيار تحت، وعدّله لو محتاج تصحيح،
+        ثم اضغط "تحديث المعاينة" لتحديث الأرقام فوق.
+      </div>
+      <div id="importMappingFields" class="import-mapping-fields"></div>
+      <button type="button" class="btn" id="refreshImportPreviewBtn" style="margin-top:12px">🔄 تحديث المعاينة</button>
+
+      <div id="importNewEmployeesBox" class="hint-box hidden" style="margin-top:14px"></div>
+      <div class="error-box hidden" id="importPreviewErrors"></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn" id="cancelImportPreviewBtn">إلغاء</button>
+      <button type="button" class="btn btn-accent" id="confirmImportPreviewBtn">✅ تأكيد الاستيراد</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== MODAL: ORDER DETAILS ============================== -->
+<div class="modal-backdrop" id="orderDetailsModal">
+  <div class="modal modal-lg">
+    <div class="modal-header"><h3>تفاصيل الطلب</h3></div>
+    <div class="modal-body"><div class="details-grid" id="orderDetailsGrid"></div></div>
+    <div class="modal-footer"><button type="button" class="btn" id="orderDetailsCloseBtn">إغلاق</button></div>
+  </div>
+</div>
+
+<!-- ============================== MODAL: ORDER EDIT ============================== -->
+<div class="modal-backdrop" id="orderEditModal">
+  <div class="modal modal-lg">
+    <div class="modal-header"><h3>تعديل الطلب</h3></div>
+    <div class="modal-body">
+      <input type="hidden" id="orderEditId">
+      <p class="confirm-lead">الشهر: <strong id="orderEditMonth">—</strong> — سيعاد حساب التقرير تلقائيًا بعد الحفظ.</p>
+      <div class="form-grid">
+        <label class="field"><span>المودريتور</span><select id="orderEditModerator"></select></label>
+        <label class="field"><span>القسم</span><select id="orderEditDepartment"></select></label>
+        <label class="field"><span>عدد الطرود</span><input type="number" min="1" step="1" id="orderEditPackages"></label>
+        <label class="field"><span>السعر</span><input type="number" min="0" step="0.01" id="orderEditPrice"></label>
+      </div>
+    </div>
+    <div class="modal-footer"><button type="button" class="btn" id="orderEditCancelBtn">إلغاء</button><button type="button" class="btn btn-accent" id="orderEditSaveBtn">💾 حفظ وإعادة الحساب</button></div>
+  </div>
+</div>
+
+<!-- ============================== MODAL: CONFIRM DIALOG ============================== -->
+<div class="modal-backdrop" id="monthCreateModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>إنشاء شهر جديد</h3>
+      <button class="icon-btn" id="closeMonthCreateModal" type="button">✕</button>
+    </div>
+    <form id="monthCreateForm">
+      <div class="modal-body">
+        <label class="form-label" for="monthCreateInput">الشهر (سنة-شهر)</label>
+        <input class="form-control" id="monthCreateInput" autocomplete="off" inputmode="numeric" placeholder="2026-09" pattern="\d{4}-(0[1-9]|1[0-2])" required>
+        <p class="form-hint">لن يتكرر إنشاء شهر موجود بالفعل. يمكن تفعيله لاحقًا من جدول الشهور.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" id="cancelMonthCreateBtn" type="button">إلغاء</button>
+        <button class="btn btn-accent" type="submit">إنشاء الشهر</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================== MODAL: RESET MONTH ============================== -->
+<div class="modal-backdrop" id="monthResetModal" aria-hidden="true">
+  <div class="modal modal-lg" role="dialog" aria-modal="true" aria-labelledby="monthResetTitle">
+    <div class="modal-header">
+      <h3 id="monthResetTitle">🗑️ إفراغ محتوى الشهر</h3>
+      <button class="icon-btn" id="closeMonthResetModal" type="button" aria-label="إغلاق">✕</button>
+    </div>
+    <form id="monthResetForm">
+      <div class="modal-body">
+        <div class="month-reset-warning">
+          <strong>تنبيه: هذه عملية غير قابلة للتراجع من الشاشة.</strong>
+          <p>سيتم إنشاء نسخة نظام تلقائية أولًا. ثم تُحذف طلبات ودفعات الشهر ومخرجات الحساب واللقطات والنسخ الشهرية فقط.</p>
+          <p>السلف والتسويات اليدوية والديون المرحلة والموظفون والأقسام والإعدادات وسجل العمليات لن تتغير.</p>
+        </div>
+        <p class="form-hint">للتأكيد، اكتب معرّف الشهر الظاهر أدناه حرفيًا:</p>
+        <p class="month-reset-id" id="monthResetExpectedId">—</p>
+        <label class="form-label" for="monthResetConfirmInput">معرّف الشهر للتأكيد</label>
+        <input class="form-control" id="monthResetConfirmInput" autocomplete="off" spellcheck="false" placeholder="مثال: 2026-07" required>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" id="cancelMonthResetBtn" type="button">إلغاء</button>
+        <button class="btn btn-danger-outline" id="monthResetConfirmBtn" type="submit" disabled>إفراغ محتوى الشهر</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================== MODAL: CONFIRM DIALOG ============================== -->
+<div class="modal-backdrop" id="confirmModal">
+  <div class="modal">
+    <div class="modal-header"><h3>تأكيد</h3></div>
+    <div class="modal-body">
+      <p id="confirmMessage" style="margin:0;color:var(--text-secondary);line-height:1.7"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" id="confirmNoBtn">إلغاء</button>
+      <button class="btn btn-danger-outline" id="confirmYesBtn">تأكيد</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="userEditorModal"><div class="modal modal-lg user-editor-modal"><div class="modal-header"><div><span class="eyebrow">إدارة الوصول</span><h3>تعديل المستخدم والصلاحيات</h3></div></div><form id="userEditorForm"><div class="modal-body"><input type="hidden" id="userEditorId"><input type="hidden" id="userAllowInput"><input type="hidden" id="userDenyInput"><div class="user-editor-identity"><span class="user-editor-avatar">👤</span><div><span class="user-editor-label">الحساب المحدد</span><p id="userEditorEmail" class="user-email"></p></div></div><div class="form-grid user-editor-basics"><div class="field"><label>الدور</label><select id="userRoleSelect"><option value="super_admin">Super Admin</option><option value="admin">Admin</option><option value="accountant">Accountant</option><option value="hr">HR</option><option value="viewer">Viewer</option></select></div><div class="field"><label>حالة الحساب</label><select id="userStatusSelect"><option value="active">Active</option><option value="suspended">Suspended</option><option value="pending">Pending</option><option value="disabled">Disabled</option></select></div></div><div class="permission-copy-row"><div class="field"><label for="copyPermissionsFrom">نسخ الصلاحيات من</label><select id="copyPermissionsFrom"><option value="">اختر مستخدمًا…</option></select></div><button type="button" class="btn" id="copyPermissionsBtn">📋 نسخ</button></div><div class="permission-editor-heading"><div><h4>الصلاحيات المخصصة</h4><p>اختر منح أو سحب لتجاوز صلاحيات الدور الافتراضية.</p></div><span class="permission-editor-note">تُعرض الأسماء بشكل مبسط</span></div><div class="permission-groups" id="permissionGroups"></div></div><div class="modal-footer"><button type="button" class="btn" id="userEditorCancelBtn">إلغاء</button><button class="btn btn-accent" type="submit">حفظ التعديلات</button></div></form></div></div>
+
+<!-- ============================== TOASTS, UNDO & LOADING ============================== -->
+<div id="toastContainer"></div>
+<!-- The 30-second undo snackbar. Separate from the toast container because it
+     is interactive and must not be cleared by an unrelated toast timing out. -->
+<div id="undoSnackbarContainer"></div>
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <div id="loadingLabel">جاري التحميل...</div>
+  <div id="loadingProgressWrap" class="loading-progress-wrap hidden">
+    <div id="loadingProgressBar" class="loading-progress-bar"></div>
+  </div>
+</div>
+
+<!-- ============================== SCRIPTS ============================== -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<!-- Load order matters, and it is dependency order:
+       firebase.js      - db, auth, COLLECTIONS
+       utils.js         - Utils (formatting, month ids, salary math)
+       service-common.js- ServiceCommon (used by all four services below)
+       audit.js         - AuditService (needs ServiceCommon)
+       departments.js   - Departments (DataLayer registers its entity)
+       backup.js        - BackupService (needs AuditService + Months at runtime)
+       data-layer.js    - DataLayer (needs AuditService + BackupService)
+       undo.js          - UndoService (needs DataLayer)
+     Everything after that is feature code. Note the services only CALL each
+     other inside functions, never at load time, so this order satisfies the
+     real dependencies rather than an imagined circular one. -->
+<script src="js/firebase.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/service-common.js"></script>
+<script src="js/audit.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/permissions.js"></script>
+<script src="js/departments.js"></script>
+<script src="js/backup.js"></script>
+<script src="js/data-layer.js"></script>
+<script src="js/undo.js"></script>
+<script src="js/migration.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/reports.js"></script>
+<script src="js/months.js"></script>
+<script src="js/settlements.js"></script>
+<script src="js/orders.js"></script>
+<script src="js/dashboard-widgets.js"></script>
+<script src="js/salary-processing.js"></script>
+<script src="js/role-matrix.js"></script>
+<script src="js/month-management.js"></script>
+<script src="js/month-comparison.js"></script>
+<script src="js/smart-approval.js"></script>
+<script src="js/user-management.js"></script>
+<script src="js/ui-icons.js"></script>
+<script src="js/app.js"></script>
+<script src="js/data-sources.js"></script>
+<script>
+  Auth.guardPage((user, profile) => {
+    document.getElementById('userAvatar').textContent = (user.email || 'A')[0].toUpperCase();
+    App.init(user, profile)
+      .then(() => { DataSources.init(); RoleMatrix.init(); SalaryProcessing.init(); })
+      .catch(error => { console.error('Application initialization failed:', error); Toast.show('تعذر إكمال تحميل النظام: ' + error.message, 'error'); });
+  });
+  UIIcons.init();
+  DashboardWidgets.init();
+  (() => { const source=document.querySelector('#view-import > .panel'); const mount=document.getElementById('ordersImportMount'); if(source&&mount){mount.appendChild(source);document.getElementById('view-import').remove();} document.querySelectorAll('.orders-center-tab').forEach(tab=>tab.addEventListener('click',()=>{document.querySelectorAll('.orders-center-tab').forEach(x=>x.classList.toggle('active',x===tab));document.querySelectorAll('.orders-center-panel').forEach(x=>x.classList.toggle('active',x.dataset.ordersPanel===tab.dataset.ordersTab));})); })();
+  document.querySelectorAll('[data-import-next],[data-import-back]').forEach(b=>b.addEventListener('click',()=>{const n=b.dataset.importNext||b.dataset.importBack;document.querySelectorAll('[data-import-stage]').forEach(x=>x.classList.toggle('active',x.dataset.importStage===n));document.querySelectorAll('[data-import-step]').forEach(x=>x.classList.toggle('active',x.dataset.importStep===n));}));
+  // Scope Configuration Center tabs to their own panel.  The salary drawer
+  // uses the same visual tab class and must not hide Settings content.
+  document.querySelectorAll('.configuration-center .config-tab[data-config-panel]').forEach(tab=>tab.addEventListener('click',()=>{const center=tab.closest('.configuration-center');center.querySelectorAll('.config-tab[data-config-panel]').forEach(x=>x.classList.toggle('active',x===tab));center.querySelectorAll('.config-panel[data-config-content]').forEach(x=>x.classList.toggle('active',x.dataset.configContent===tab.dataset.configPanel));}));
+
+  // Sync visible page title with the active sidebar item
+  const titles = {
+    dashboard: 'نظرة عامة', departments: 'إدارة الأقسام',
+    moderators: 'إدارة الموظفين', import: 'استيراد الطلبات', orders: 'إدارة الطلبات', months: 'إدارة الشهور', 'month-comparison': 'مقارنة الشهور', report: 'التقرير الشهري',
+    transactions: 'السلف والتسويات', settlement: 'تسوية مستحقات الموظف',
+    archive: 'الأرشيف',
+    backups: 'النسخ الاحتياطية', audit: 'سجل العمليات', settings: 'الإعدادات', users: 'إدارة المستخدمين والصلاحيات'
+  };
+  document.querySelectorAll('.nav-item[data-view]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('pageTitle').textContent = titles[btn.dataset.view];
+      document.getElementById('breadcrumbCurrent').textContent = titles[btn.dataset.view];
+    });
+  });
+</script>
+</body>
+</html>

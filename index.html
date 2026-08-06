@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>نظام إدارة رواتب المشرفين</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    html, body { height: 100%; margin: 0; background: #0f1115; }
+    .boot-wrap {
+      height: 100%; display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 14px; font-family: 'Segoe UI', sans-serif;
+    }
+    .spinner {
+      width: 38px; height: 38px; border-radius: 50%;
+      border: 3px solid rgba(255,255,255,.15); border-top-color: #3d5afe;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    p { color: #a3a9b7; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="boot-wrap">
+    <div class="spinner"></div>
+    <p>جاري التحميل...</p>
+  </div>
+
+  <!-- Firebase SDK (compat build - no bundler required) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script>
+    // This redirect page only needs Authentication. Loading firebase.js here
+    // also opened Firestore and enabled persistence immediately before the
+    // dashboard opened it again, which could leave a fresh dashboard waiting
+    // on Firestore initialization. Keep this document auth-only.
+    firebase.initializeApp({
+      apiKey: 'AIzaSyBt_5dwDBgyiHAj5OsnAA1fwHXQ2sd3-tk',
+      authDomain: 'moderator-salary9.firebaseapp.com',
+      projectId: 'moderator-salary9',
+      appId: '1:604946335764:web:2b8b640d8af215c59abf01'
+    });
+    const rootAuth = firebase.auth();
+
+    // Route to the dashboard if already authenticated, otherwise to login.
+    rootAuth.onAuthStateChanged((user) => {
+      // Keep the dashboard document in step with its cache-revalidated scripts
+      // after a Hosting deployment.
+      window.location.replace(user ? 'dashboard.html?v=2-orders' : 'login.html');
+    });
+  </script>
+</body>
+</html>
